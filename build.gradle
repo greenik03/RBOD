@@ -12,6 +12,11 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation("net.dv8tion:JDA:5.5.1") {
+         exclude module: 'opus-java' // required for encoding audio into opus, not needed if audio is already provided in opus encoding
+         exclude module: 'tink' // required for encrypting and decrypting audio
+    }
+    implementation("ch.qos.logback:logback-classic:1.5.18")
 }
 
 test {
