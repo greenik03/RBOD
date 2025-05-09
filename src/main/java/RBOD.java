@@ -3,6 +3,7 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
@@ -22,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Scanner;
 
 public class RBOD extends ListenerAdapter {
     // Initialize variables
@@ -51,15 +53,57 @@ public class RBOD extends ListenerAdapter {
 //        System.out.printf("%d: %s", phraseIndex, phrasesList.get(phraseIndex));
 
         CommandListUpdateAction commands = jda.updateCommands();
-        //TODO: Add options for response activations on name mention and on reply through slash commands. Direct mentions are always on.
+        //Options for response activations on name mention and on reply through slash commands. Direct mentions are always on.
+        commands.addCommands(Commands.slash("toggle", "Toggles the bot's response activations.")
+                .addSubcommands(
+                        new SubcommandData("reactOnName", "Toggles the bot's reaction on name mentions.")
+                                .addOption(OptionType.BOOLEAN, "on", "Whether to turn the reaction on or off.", true),
+                        new SubcommandData("reactOnReply", "Toggles the bot's reaction on replies.")
+                                .addOption(OptionType.BOOLEAN, "on", "Whether to turn the reaction on or off.", true)
+                )
+        ).queue();
 
         try {
                 jda.awaitReady();
         }
         catch (Exception e) {
             System.err.println("Something went wrong while starting the bot.");
+            jda.shutdown();
             throw new RuntimeException(e);
         }
+        // Control the bot from a CLI
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            String[] input = scanner.nextLine().split("\\s+");
+            String baseCommand = input[0];
+            if (baseCommand.equalsIgnoreCase("stop") || baseCommand.equalsIgnoreCase("exit") || baseCommand.equalsIgnoreCase("quit")) {
+                break;
+            }
+            switch (baseCommand) {
+                case "toggle":
+                    String argument = input[1];
+                    if (argument.equalsIgnoreCase("reactOnName")) {
+                        reactOnName = !reactOnName;
+                        System.out.println("reactOnName is now " + (reactOnName ? "on" : "off"));
+                    }
+                    else if (argument.equalsIgnoreCase("reactOnReply")) {
+                        reactOnReply = !reactOnReply;
+                        System.out.println("reactOnReply is now " + (reactOnReply ? "on" : "off"));
+                    }
+                    else if (argument.equalsIgnoreCase("all")) {
+                        reactOnName = !reactOnName;
+                        reactOnReply = !reactOnReply;
+                        System.out.println("reactOnName is now " + (reactOnName ? "on" : "off"));
+                        System.out.println("reactOnReply is now " + (reactOnReply ? "on" : "off"));
+                    }
+                    break;
+                case "help":
+                    printCLIUsage();
+                    break;
+            }
+        }
+        scanner.close();
+        jda.shutdown();
 
     }
     // End of main method
@@ -93,9 +137,24 @@ public class RBOD extends ListenerAdapter {
         }
     }
 
+    static void printCLIUsage() {
+        System.out.println("Here are the commands you can use:");
+        System.out.println("stop, exit, quit - Stops the bot.");
+        System.out.println("toggle all - Toggles both reactOnName and reactOnReply.");
+        System.out.println("toggle reactOnName - Toggles reactOnName.");
+        System.out.println("toggle reactOnReply - Toggles reactOnReply.");
+    }
+
     @Override
     public void onReady(@NotNull ReadyEvent event) {
+        System.out.println("Bot is online! Type 'help' for a list of commands.");
         super.onReady(event);
+    }
+
+    @Override
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+//        event.getInteraction().getChannel().sendTyping().queue();
+        super.onSlashCommandInteraction(event);
     }
 
     @Override
@@ -105,6 +164,7 @@ public class RBOD extends ListenerAdapter {
 
     @Override
     public void onShutdown(@NotNull ShutdownEvent event) {
+        System.out.println("Bot is shutting down...");
         super.onShutdown(event);
     }
 
