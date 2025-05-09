@@ -41,3 +41,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 /assets/token.txt
+/assets/phrases.txt
+/assets/applicationID.txt
