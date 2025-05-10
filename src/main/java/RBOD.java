@@ -44,8 +44,6 @@ public class RBOD extends ListenerAdapter {
     // Start of main method
     public static void main(String[] args) {
         String token = readSingleLineFile(discordToken);
-        List<String> phrasesList = readPhrasesFromFile();
-        int phraseIndex = rng.nextInt(0, phrasesList.size());
         JDA jda = JDABuilder.createLight(token, intents)
                 .addEventListeners(new RBOD())
                 .setActivity(Activity.customStatus("It's reacting time!"))
@@ -56,9 +54,9 @@ public class RBOD extends ListenerAdapter {
         //Options for response activations on name mention and on reply through slash commands. Direct mentions are always on.
         commands.addCommands(Commands.slash("toggle", "Toggles the bot's response activations.")
                 .addSubcommands(
-                        new SubcommandData("reactOnName", "Toggles the bot's reaction on name mentions.")
+                        new SubcommandData("reactname", "Toggles the bot's reaction on name mentions.")
                                 .addOption(OptionType.BOOLEAN, "on", "Whether to turn the reaction on or off.", true),
-                        new SubcommandData("reactOnReply", "Toggles the bot's reaction on replies.")
+                        new SubcommandData("reactreply", "Toggles the bot's reaction on replies.")
                                 .addOption(OptionType.BOOLEAN, "on", "Whether to turn the reaction on or off.", true)
                 )
         ).queue();
@@ -100,6 +98,8 @@ public class RBOD extends ListenerAdapter {
                 case "help":
                     printCLIUsage();
                     break;
+                default:
+                    System.out.println("Unknown command. Type 'help' to list all commands.");
             }
         }
         scanner.close();
@@ -152,14 +152,30 @@ public class RBOD extends ListenerAdapter {
     }
 
     @Override
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-//        event.getInteraction().getChannel().sendTyping().queue();
-        super.onSlashCommandInteraction(event);
+    public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
+        if (event.getName().equalsIgnoreCase("toggle")) {
+            if (event.getSubcommandName().equalsIgnoreCase("reactname")) {
+                reactOnName = event.getOption("on").getAsBoolean();
+                event.reply("Name reactions are " + (reactOnName ? "on!" : "off!")).queue();
+            }
+            else if (event.getSubcommandName().equalsIgnoreCase("reactreply")) {
+                reactOnReply = event.getOption("on").getAsBoolean();
+                event.reply("Reply reactions are " + (reactOnReply ? "on!" : "off!")).queue();
+            }
+        }
     }
 
     @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
-        super.onMessageReceived(event);
+        List<String> phrasesList = readPhrasesFromFile();
+        int phraseIndex = rng.nextInt(0, phrasesList.size());
+        String message = event.getMessage().getContentRaw();
+        String mention = String.format("<@%s>", readSingleLineFile(appID));
+        if (message.contains(mention)) {
+            event.getMessage()
+                    .reply(phrasesList.get(phraseIndex))
+                    .queue();
+        }
     }
 
     @Override
