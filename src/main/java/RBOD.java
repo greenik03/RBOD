@@ -1,9 +1,6 @@
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageType;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -29,6 +26,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
+//TODO: Implement database for server-specific settings
+
 public class RBOD extends ListenerAdapter {
     // Initialize variables
     static EnumSet<GatewayIntent> intents = EnumSet.of(
@@ -46,8 +45,7 @@ public class RBOD extends ListenerAdapter {
             reactOnReply = false;
     static List<String> names = List.of(
             "react bot",
-            "reactbot",
-            "stinky"
+            "reactbot"
     );
 
     // Start of main method
@@ -57,16 +55,15 @@ public class RBOD extends ListenerAdapter {
                 .addEventListeners(new RBOD())
                 .setActivity(Activity.customStatus("It's reacting time!"))
                 .build();
-//        System.out.printf("%d: %s", phraseIndex, phrasesList.get(phraseIndex));
 
         CommandListUpdateAction commands = jda.updateCommands();
-        //Options for response activations on name mention and on reply through slash commands. Direct mentions are always on.
+        //Options for response activations on name mention and on reply through slash commands. Direct mentions and DMs are always on.
         commands.addCommands(Commands.slash("toggle", "Toggles the bot's response activations.")
                 .addSubcommands(
-                        new SubcommandData("reactname", "Toggles the bot's reaction on name mentions.")
-                                .addOption(OptionType.BOOLEAN, "on", "Whether to turn the reaction on or off.", true),
-                        new SubcommandData("reactreply", "Toggles the bot's reaction on replies.")
-                                .addOption(OptionType.BOOLEAN, "on", "Whether to turn the reaction on or off.", true)
+                        new SubcommandData("on-name-react", "Toggles the bot's reaction on name mentions.")
+                                .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
+                        new SubcommandData("on-reply-react", "Toggles the bot's reaction on replies.")
+                                .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true)
                 )
         ).queue();
 
@@ -87,23 +84,6 @@ public class RBOD extends ListenerAdapter {
                 break;
             }
             switch (baseCommand) {
-                case "toggle":
-                    String argument = input[1];
-                    if (argument.equalsIgnoreCase("reactOnName")) {
-                        reactOnName = !reactOnName;
-                        System.out.println("reactOnName is now " + (reactOnName ? "on" : "off"));
-                    }
-                    else if (argument.equalsIgnoreCase("reactOnReply")) {
-                        reactOnReply = !reactOnReply;
-                        System.out.println("reactOnReply is now " + (reactOnReply ? "on" : "off"));
-                    }
-                    else if (argument.equalsIgnoreCase("all")) {
-                        reactOnName = !reactOnName;
-                        reactOnReply = !reactOnReply;
-                        System.out.println("reactOnName is now " + (reactOnName ? "on" : "off"));
-                        System.out.println("reactOnReply is now " + (reactOnReply ? "on" : "off"));
-                    }
-                    break;
                 case "help":
                     printCLIUsage();
                     break;
@@ -149,9 +129,6 @@ public class RBOD extends ListenerAdapter {
     static void printCLIUsage() {
         System.out.println("Here are the commands you can use:");
         System.out.println("stop, exit, quit - Stops the bot.");
-        System.out.println("toggle all - Toggles both reactOnName and reactOnReply.");
-        System.out.println("toggle reactOnName - Toggles reactOnName.");
-        System.out.println("toggle reactOnReply - Toggles reactOnReply.");
     }
 
     @Override
@@ -163,12 +140,12 @@ public class RBOD extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         if (event.getName().equalsIgnoreCase("toggle")) {
-            if (event.getSubcommandName().equalsIgnoreCase("reactname")) {
-                reactOnName = event.getOption("on").getAsBoolean();
+            if (event.getSubcommandName().equalsIgnoreCase("on-name-react")) {
+                reactOnName = event.getOption("option").getAsBoolean();
                 event.reply("Name reactions are " + (reactOnName ? "on!" : "off!")).queue();
             }
-            else if (event.getSubcommandName().equalsIgnoreCase("reactreply")) {
-                reactOnReply = event.getOption("on").getAsBoolean();
+            else if (event.getSubcommandName().equalsIgnoreCase("on-reply-react")) {
+                reactOnReply = event.getOption("option").getAsBoolean();
                 event.reply("Reply reactions are " + (reactOnReply ? "on!" : "off!")).queue();
             }
         }
@@ -179,15 +156,25 @@ public class RBOD extends ListenerAdapter {
         List<String> phrasesList = readPhrasesFromFile();
         int phraseIndex = rng.nextInt(0, phrasesList.size());
         String message = event.getMessage().getContentRaw();
-        String mention = String.format("<@%s>", readSingleLineFile(appID));
-        User self = event.getGuild().getSelfMember().getUser();
+        SelfUser self = event.getJDA().getSelfUser();
+        String mention = String.format("<@%s>", self.getApplicationId());
 
+        // Respond to direct messages
+        if (!event.isFromGuild()) {
+            if (event.getMessage().getAuthor().equals(self)) return;
+            event.getMessage()
+                    .reply(phrasesList.get(phraseIndex))
+                    .queue();
+            return;
+        }
+        // Respond to @ mentions
         if (message.contains(mention)) {
             event.getMessage()
                     .reply(phrasesList.get(phraseIndex))
                     .queue();
             return;
         }
+        // Respond to name call
         if (reactOnName) {
             // React Bot may react to itself if phrase contains its name
             for (String name : names) {
@@ -200,6 +187,7 @@ public class RBOD extends ListenerAdapter {
             }
             return;
         }
+        // Respond to reply
         if (reactOnReply) {
             if (event.getMessage().getType().equals(MessageType.INLINE_REPLY) &&
                     event.getMessage().getReferencedMessage().getAuthor().equals(self)) {
