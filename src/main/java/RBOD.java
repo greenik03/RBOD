@@ -1,6 +1,9 @@
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageType;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -8,6 +11,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.InteractionContextType;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
@@ -40,6 +44,11 @@ public class RBOD extends ListenerAdapter {
     static Random rng = new Random();
     static boolean reactOnName = false,
             reactOnReply = false;
+    static List<String> names = List.of(
+            "react bot",
+            "reactbot",
+            "stinky"
+    );
 
     // Start of main method
     public static void main(String[] args) {
@@ -171,10 +180,33 @@ public class RBOD extends ListenerAdapter {
         int phraseIndex = rng.nextInt(0, phrasesList.size());
         String message = event.getMessage().getContentRaw();
         String mention = String.format("<@%s>", readSingleLineFile(appID));
+        User self = event.getGuild().getSelfMember().getUser();
+
         if (message.contains(mention)) {
             event.getMessage()
                     .reply(phrasesList.get(phraseIndex))
                     .queue();
+            return;
+        }
+        if (reactOnName) {
+            // React Bot may react to itself if phrase contains its name
+            for (String name : names) {
+                if (message.toLowerCase().contains(name.toLowerCase())) {
+                    event.getMessage()
+                            .reply(phrasesList.get(phraseIndex))
+                            .queue();
+                    break;
+                }
+            }
+            return;
+        }
+        if (reactOnReply) {
+            if (event.getMessage().getType().equals(MessageType.INLINE_REPLY) &&
+                    event.getMessage().getReferencedMessage().getAuthor().equals(self)) {
+                event.getMessage()
+                        .reply(phrasesList.get(phraseIndex))
+                        .queue();
+            }
         }
     }
 
