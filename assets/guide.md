@@ -8,12 +8,7 @@ The token for the bot. A string of random characters that should be the only lin
 text document. \
 **<u>WARNING: Make sure to never expose your token to anyone else in any way!</u>
 Doing so allows anyone to control the bot with their own code. 
-Should something like this happen, reset the token in your Discord Developer Portal!** 
-
-## applicationID.txt
-___
-The user ID of the bot on Discord. This is used for the bot to recognize when it is @ mentioned in messages. \
-The ID should be the only line in the text document.
+Should something like this happen, reset the token in your Discord Developer Portal!**
 
 ## phrases.txt
 ___

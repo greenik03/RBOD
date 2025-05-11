@@ -38,8 +38,7 @@ public class RBOD extends ListenerAdapter {
         GatewayIntent.DIRECT_MESSAGE_REACTIONS
     );
     static File discordToken = new File("assets/token.txt"),
-    phrases = new File("assets/phrases.txt"),
-    appID = new File("assets/applicationID.txt");
+    phrases = new File("assets/phrases.txt");
     static Random rng = new Random();
     static boolean reactOnName = false,
             reactOnReply = false;
@@ -111,7 +110,7 @@ public class RBOD extends ListenerAdapter {
         }
     }
 
-    // Read token from assets/token.txt or bot's ID from assets/applicationID.txt
+    // Read token from assets/token.txt
     static String readSingleLineFile(File file) {
         if (file.exists() && file.canRead()) {
             try {
