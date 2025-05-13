@@ -44,7 +44,8 @@ public class RBOD extends ListenerAdapter {
             reactOnReply = false;
     static List<String> names = List.of(
             "react bot",
-            "reactbot"
+            "reactbot",
+            "rbod"
     );
 
     // Start of main method
@@ -157,29 +158,39 @@ public class RBOD extends ListenerAdapter {
         String message = event.getMessage().getContentRaw();
         SelfUser self = event.getJDA().getSelfUser();
         String mention = String.format("<@%s>", self.getApplicationId());
+        String reply = phrasesList.get(phraseIndex).trim();
+
+        // Check for blank phrases or escape sequences
+        while (reply.isBlank()) {
+            phraseIndex = rng.nextInt(0, phrasesList.size());
+            reply = phrasesList.get(phraseIndex).trim();
+        }
+        if (reply.contains("\\n")) {
+            reply = reply.replace("\\n", "\n");
+        }
 
         // Respond to direct messages
         if (!event.isFromGuild()) {
             if (event.getMessage().getAuthor().equals(self)) return;
             event.getMessage()
-                    .reply(phrasesList.get(phraseIndex))
+                    .reply(reply)
                     .queue();
             return;
         }
         // Respond to @ mentions
         if (message.contains(mention)) {
             event.getMessage()
-                    .reply(phrasesList.get(phraseIndex))
+                    .reply(reply)
                     .queue();
             return;
         }
         // Respond to name call
         if (reactOnName) {
-            // React Bot may react to itself if phrase contains its name
+            // React Bot may react to itself if the phrase contains its name
             for (String name : names) {
                 if (message.toLowerCase().contains(name.toLowerCase())) {
                     event.getMessage()
-                            .reply(phrasesList.get(phraseIndex))
+                            .reply(reply)
                             .queue();
                     break;
                 }
@@ -191,7 +202,7 @@ public class RBOD extends ListenerAdapter {
             if (event.getMessage().getType().equals(MessageType.INLINE_REPLY) &&
                     event.getMessage().getReferencedMessage().getAuthor().equals(self)) {
                 event.getMessage()
-                        .reply(phrasesList.get(phraseIndex))
+                        .reply(reply)
                         .queue();
             }
         }
@@ -206,7 +217,7 @@ public class RBOD extends ListenerAdapter {
     // Message when bot joins a guild/server
     @Override
     public void onGuildJoin(GuildJoinEvent event) {
-        String welcomeMessage = "Hi! I'm ReactBot! @ me for a cool reaction! Use `/toggle` for additional ways to interact with me.";
+        String welcomeMessage = "Hi! I'm ReactBot! @ me to react to your message! Use `/toggle` for additional ways to interact with me.";
         TextChannel channel = event.getGuild().getSystemChannel();
         if (channel == null || !channel.canTalk()) {
             for (TextChannel textChannel : event.getGuild().getTextChannels()) {
