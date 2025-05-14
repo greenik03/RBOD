@@ -8,10 +8,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.InteractionContextType;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
@@ -38,10 +36,13 @@ public class RBOD extends ListenerAdapter {
         GatewayIntent.DIRECT_MESSAGE_REACTIONS
     );
     static File discordToken = new File("assets/token.txt"),
-    phrases = new File("assets/phrases.txt");
+    phrases = new File("assets/phrases.txt"),
+    serverDatabase = new File("assets/servers.db"),
+    nameDatabase = new File("assets/names.db");
     static Random rng = new Random();
     static boolean reactOnName = false,
-            reactOnReply = false;
+            reactOnReply = false,
+            slashNameUsed = false;
     static List<String> names = List.of(
             "react bot",
             "reactbot",
@@ -64,7 +65,15 @@ public class RBOD extends ListenerAdapter {
                                 .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
                         new SubcommandData("on-reply-react", "Toggles the bot's reaction on replies.")
                                 .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true)
-                )
+                ),
+                Commands.slash("names", "Change the names the bot reacts to. (Requires name reactions to be on!)")
+                        .addSubcommands(
+                                new SubcommandData("add", "Adds a name to the list of names the bot reacts to.")
+                                        .addOption(OptionType.STRING, "name", "The name the bot will react to.", true),
+                                new SubcommandData("remove", "Removes a name from the list of names the bot reacts to.")
+                                        .addOption(OptionType.STRING, "name", "The name to remove from the list.", true),
+                                new SubcommandData("list", "Lists all the names the bot reacts to.")
+                        )
         ).queue();
 
         try {
@@ -75,6 +84,13 @@ public class RBOD extends ListenerAdapter {
             jda.shutdown();
             throw new RuntimeException(e);
         }
+
+//        if (!serverDatabase.exists() || !nameDatabase.exists()) {
+//            ServerDatabase.init();
+//            jda.getGuilds()
+//                    .forEach(guild -> ServerDatabase.updateServerTable(guild.getId(), "false", "false", true));
+//        }
+
         // Control the bot from a CLI
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -142,11 +158,43 @@ public class RBOD extends ListenerAdapter {
         if (event.getName().equalsIgnoreCase("toggle")) {
             if (event.getSubcommandName().equalsIgnoreCase("on-name-react")) {
                 reactOnName = event.getOption("option").getAsBoolean();
+                slashNameUsed = false;
                 event.reply("Name reactions are " + (reactOnName ? "on!" : "off!")).queue();
             }
             else if (event.getSubcommandName().equalsIgnoreCase("on-reply-react")) {
                 reactOnReply = event.getOption("option").getAsBoolean();
                 event.reply("Reply reactions are " + (reactOnReply ? "on!" : "off!")).queue();
+            }
+        }
+        else if (event.getName().equalsIgnoreCase("names")) {
+            if (event.getSubcommandName().equalsIgnoreCase("add")) {
+                String name = event.getOption("name").getAsString();
+                if (names.contains(name)) {
+                    event.reply("That name is already in the list.").queue();
+                }
+                else {
+                    names.add(name);
+                    slashNameUsed = true;
+                    event.reply("Added " + name + " to the name list. Wowza!").queue();
+                }
+            }
+            else if (event.getSubcommandName().equalsIgnoreCase("remove")) {
+                String name = event.getOption("name").getAsString();
+                if (!names.contains(name)) {
+                    event.reply("That name is not in the list.").queue();
+                }
+                else {
+                    names.remove(name);
+                    event.reply("Removed " + name + " from the name list. Fiddlesticks...").queue();
+                }
+            }
+            else if (event.getSubcommandName().equalsIgnoreCase("list")) {
+                slashNameUsed = true;
+                StringBuilder builder = new StringBuilder("The current name list is:\n");
+                for (String name : names) {
+                    builder.append(name).append("\n");
+                }
+                event.reply(builder.toString()).queue();
             }
         }
     }
@@ -187,6 +235,10 @@ public class RBOD extends ListenerAdapter {
         // Respond to name call
         if (reactOnName) {
             // React Bot may react to itself if the phrase contains its name
+            if (slashNameUsed) {
+                slashNameUsed = false;
+                return;
+            }
             for (String name : names) {
                 if (message.toLowerCase().contains(name.toLowerCase())) {
                     event.getMessage()
