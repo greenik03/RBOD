@@ -18,7 +18,7 @@ dependencies {
          exclude module: 'tink' // required for encrypting and decrypting audio
     }
     implementation("ch.qos.logback:logback-classic:1.5.18")
-    implementation('com.github.BooleanCube:DiscordDB:2.1.3')
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.18.3')
 }
 
 test {
