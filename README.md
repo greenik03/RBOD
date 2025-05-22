@@ -17,9 +17,7 @@ Interaction by @mention is always enabled, but there are optional triggers that 
 
 The slash commands, by default, are enabled for members with `Manage Messages` permission, though they can be overridden for use by specific users or roles by going into `Server Settings -> Integrations`.
 
-## Setup
-This part assumes you have a spare computer you can use as the server for the bot or an actual server you can use to host the bot.
-You can also use services like PebbleHost which allow Discord bot hosting, but the steps required to setting up a bot with them may not be 1:1 with the steps below.
+## Build
 1. Clone the repository and open the project in your IDE
    - if you get an error about Gradle not being set up properly, then set the JDK version to 20 (that's the version the bot was developed in) or higher, and make sure the following is included in build.gradle:
    ```gradle
@@ -35,9 +33,25 @@ You can also use services like PebbleHost which allow Discord bot hosting, but t
         implementation("ch.qos.logback:logback-classic:1.5.18")
         implementation('com.fasterxml.jackson.core:jackson-databind:2.18.3')
     }
+   jar {
+      manifest {
+         attributes "Main-Class": "g03.discord.rbod.RBOD"
+      }
+      duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+      from {
+         configurations.runtimeClasspath.collect {it.isDirectory()? it : zipTree(it)}
+      }
+   }
     ```
-2. Create the necessary files in the "assets" folder ([check guide.md for more info](assets/guide.md))
-3. Run RBOD.java
+2. Run the build task in Gradle to create a .jar file. It should be named as 'rbod-*[version]*.jar'.
+3. Make sure your OS has JRE, at least version 20. If you're not sure what version you have, open a terminal/CMD and run `java -version`. If you don't have version 20 or newer, [download it from here](https://adoptium.net/temurin/releases/).
+   - If you're running the .jar off of the IDE, then skip this step.
+4. Locate the newly created .jar in build/libs. 
+   - If you're not running the .jar using the IDE, you can take the .jar file and place it in a dedicated folder wherever you like.
+5. Create an "assets" folder if there isn't one and create the necessary files in the folder. ([check guide.md for more info](assets/guide.md))
+6. Create a folder called "databases" and leave it empty.
+
+Once that's all done, the bot is ready to go! Open a terminal/CMD in the same directory as the .jar and run `java -jar rbod-[version].jar`.
 
 ## Contribution
 If you find any problems with the program, open an issue and let me know about it. \

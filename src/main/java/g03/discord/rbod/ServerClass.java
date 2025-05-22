@@ -1,3 +1,5 @@
+package g03.discord.rbod;
+
 import java.io.Serializable;
 
 // Serializable probably does nothing here since this class is only used to show server info in the CLI
@@ -28,7 +30,7 @@ public class ServerClass implements Serializable {
 
     @Override
     public String toString() {
-        return "ServerClass{" +
+        return "Server {" +
                 "serverId='" + serverId + '\'' +
                 ", settings=" + settings +
                 '}';

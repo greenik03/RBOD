@@ -1,3 +1,5 @@
+package g03.discord.rbod;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +52,7 @@ public class SettingsObj implements Serializable {
 
     @Override
     public String toString() {
-        return "SettingsObj{" +
+        return "Settings {" +
                 "names=" + names +
                 ", reactOnName=" + reactOnName +
                 ", reactOnReply=" + reactOnReply +
