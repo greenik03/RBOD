@@ -1,5 +1,6 @@
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
@@ -9,6 +10,8 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.IntegrationType;
+import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
@@ -50,7 +53,8 @@ public class RBOD extends ListenerAdapter {
                                 .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
                         new SubcommandData("on-reply-react", "Toggles the bot's reaction on replies.")
                                 .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true)
-                ),
+                ).setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
                 Commands.slash("names", "Change the names the bot reacts to. (Requires name reactions to be on!)")
                         .addSubcommands(
                                 new SubcommandData("add", "Adds a name to the list of names the bot reacts to.")
@@ -58,9 +62,14 @@ public class RBOD extends ListenerAdapter {
                                 new SubcommandData("remove", "Removes a name from the list of names the bot reacts to.")
                                         .addOption(OptionType.STRING, "name", "The name to remove from the list.", true),
                                 new SubcommandData("list", "Lists all the names the bot reacts to.")
-                        ),
-                Commands.slash("help", "Lists all the commands."),
+                        ).setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
+                Commands.slash("help", "Lists all the commands.")
+                        .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
                 Commands.slash("reset", "Resets the bot's settings for this server to default.")
+                        .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
         ).queue();
 
         ServerDatabase.init();

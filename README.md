@@ -15,7 +15,7 @@ Interaction by @mention is always enabled, but there are optional triggers that 
 - `/reset` - Resets the bot's settings for the server the command was executed from back to default.
 - `/help` - Brings up the list of commands.
 
-The slash commands, by default, are enabled for all members of a server. They can be limited to specific users or roles by going into `Server Settings -> Integrations`.
+The slash commands, by default, are enabled for members with `Manage Messages` permission, though they can be overridden for use by specific users or roles by going into `Server Settings -> Integrations`.
 
 ## Setup
 This part assumes you have a spare computer you can use as the server for the bot or an actual server you can use to host the bot.
