@@ -27,13 +27,12 @@ public class RBOD extends ListenerAdapter {
     static EnumSet<GatewayIntent> intents = EnumSet.of(
         GatewayIntent.GUILD_MESSAGES,
         GatewayIntent.DIRECT_MESSAGES,
-        GatewayIntent.MESSAGE_CONTENT,
-        GatewayIntent.GUILD_MESSAGE_REACTIONS,
-        GatewayIntent.DIRECT_MESSAGE_REACTIONS
+        GatewayIntent.MESSAGE_CONTENT
     );
     static File discordToken = new File("assets/token.txt"),
         phrases = new File("assets/phrases.txt");
     static Random rng = new Random();
+    static String systemMessagePrefix = "[RBOD]: ";
 
     // Start of main method
     public static void main(String[] args) {
@@ -60,16 +59,16 @@ public class RBOD extends ListenerAdapter {
                                         .addOption(OptionType.STRING, "name", "The name to remove from the list.", true),
                                 new SubcommandData("list", "Lists all the names the bot reacts to.")
                         ),
-                Commands.slash("help", "Lists all the commands.")
+                Commands.slash("help", "Lists all the commands."),
+                Commands.slash("reset", "Resets the bot's settings for this server to default.")
         ).queue();
 
-        // ObjectMapper is set here due to how init() works
         ServerDatabase.init();
         try {
             jda.awaitReady();
         }
         catch (Exception e) {
-            System.err.println("Something went wrong while starting the bot.");
+            System.err.println(systemMessagePrefix + "Something went wrong while starting the bot.");
             jda.shutdown();
             throw new RuntimeException(e);
         }
@@ -80,7 +79,7 @@ public class RBOD extends ListenerAdapter {
                     }
                     catch (IOException e) {
                         if (e.getMessage().equals("Server already exists in database.")) {
-                            System.out.println("Server already exists in database. Skipping...");
+                            System.out.println(systemMessagePrefix + "Server already exists in database. Skipping " + guild.getId() + " ...");
                         }
                         else {
                             throw new RuntimeException(e);
@@ -107,7 +106,7 @@ public class RBOD extends ListenerAdapter {
                     }
                     break;
                 default:
-                    System.out.println("Unknown command. Type 'help' to list all commands.");
+                    System.out.println(systemMessagePrefix + "Unknown command. Type 'help' to list all commands.");
             }
         }
         scanner.close();
@@ -146,21 +145,20 @@ public class RBOD extends ListenerAdapter {
     }
 
     static void printCLIUsage() {
-        System.out.println("Here are the commands you can use:");
-        System.out.println("listservers - Lists all the servers in the database.");
-        System.out.println("stop, exit, quit - Stops the bot.");
+        System.out.println(systemMessagePrefix + "Here are the commands you can use:");
+        System.out.println("\tlistservers - Lists all the servers in the database.");
+        System.out.println("\tstop, exit, quit - Stops the bot.");
     }
 
     @Override
     public void onReady(@NotNull ReadyEvent event) {
-        System.out.println("Bot is online! Type 'help' for a list of commands.");
-        super.onReady(event);
+        System.out.println(systemMessagePrefix + "Bot is online! Type 'help' for a list of commands.");
     }
 
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         if (!event.isFromGuild()) {
-            event.reply("Commands are only available in servers.").queue();
+            event.reply("`Commands are only available in servers.`").queue();
             return;
         }
         String ID = Objects.requireNonNull(event.getGuild()).getId();
@@ -171,7 +169,7 @@ public class RBOD extends ListenerAdapter {
             settings = null;
         }
         if (settings == null) {
-            event.reply("Settings not found. Creating new settings for server. Run the command again.").queue();
+            event.reply("`Settings not found. Creating new settings for server. Run the command again.`").queue();
             try {
                 ServerDatabase.addServer(ID);
             } catch (IOException e) {
@@ -179,78 +177,103 @@ public class RBOD extends ListenerAdapter {
             }
             return;
         }
-        if (event.getName().equalsIgnoreCase("toggle")) {
-            try {
-                if (event.getSubcommandName().equalsIgnoreCase("on-name-react")) {
-                    boolean reactOnName = event.getOption("option").getAsBoolean();
-                    settings.setReactOnName(reactOnName);
-                    ServerDatabase.setSettings(ID, settings);
-                    event.reply("Name reactions are " + (reactOnName ? "on!" : "off!")).queue();
-                } else if (event.getSubcommandName().equalsIgnoreCase("on-reply-react")) {
-                    boolean reactOnReply = event.getOption("option").getAsBoolean();
-                    settings.setReactOnReply(reactOnReply);
-                    ServerDatabase.setSettings(ID, settings);
-                    event.reply("Reply reactions are " + (reactOnReply ? "on!" : "off!")).queue();
+        String[] command = event.getFullCommandName()
+                .toLowerCase()
+                .trim()
+                .split("\\s+");
+        if (command.length >= 2) {
+            if (command[0].equalsIgnoreCase("toggle")) {
+                try {
+                    if (command[1].equalsIgnoreCase("on-name-react")) {
+                        boolean reactOnName = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
+                        settings.setReactOnName(reactOnName);
+                        ServerDatabase.setSettings(ID, settings);
+                        event.reply("`Name reactions are " + (reactOnName ? "on" : "off") + "!`").queue();
+                    } else if (command[1].equalsIgnoreCase("on-reply-react")) {
+                        boolean reactOnReply = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
+                        settings.setReactOnReply(reactOnReply);
+                        ServerDatabase.setSettings(ID, settings);
+                        event.reply("`Reply reactions are " + (reactOnReply ? "on" : "off") + "!`").queue();
+                    }
+                }
+                catch (IOException e) {
+                    event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
+                            .setEphemeral(true)
+                            .queue();
                 }
             }
-            catch (IOException e) {
-                event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
-                        .setEphemeral(true)
-                        .queue();
-            }
-        }
-        else if (event.getName().equalsIgnoreCase("names")) {
-            try {
-                if (event.getSubcommandName().equalsIgnoreCase("add")) {
-                    String name = event.getOption("name").getAsString().trim();
-                    if (name.isBlank()) {
-                        event.reply("That's a nothing burger... (Name cannot be blank)").queue();
-                        return;
+            else if (command[0].equalsIgnoreCase("names")) {
+                try {
+                    if (command[1].equalsIgnoreCase("add")) {
+                        String name = Objects.requireNonNull(event.getOption("name"))
+                                .getAsString()
+                                .trim()
+                                .toLowerCase();
+                        if (name.isBlank()) {
+                            event.reply("That's a nothing burger... `(Name cannot be blank)`").queue();
+                            return;
+                        }
+                        if (settings.containsName(name)) {
+                            event.reply("`That name is already in the list.`").queue();
+                        } else {
+                            settings.addName(name);
+                            ServerDatabase.setSettings(ID, settings);
+                            event.reply("`Added '" + name + "' to the name list. Wowza!`").queue();
+                        }
+                    } else if (command[1].equalsIgnoreCase("remove")) {
+                        String name = Objects.requireNonNull(event.getOption("name"))
+                                .getAsString()
+                                .trim()
+                                .toLowerCase();
+                        if (name.isBlank()) {
+                            event.reply("That's a nothing burger... `(Name cannot be blank)`").queue();
+                            return;
+                        }
+                        if (!settings.containsName(name)) {
+                            event.reply("`That name is not in the list.`").queue();
+                        } else {
+                            settings.removeName(name);
+                            ServerDatabase.setSettings(ID, settings);
+                            event.reply("`Removed '" + name + "' from the name list. Fiddlesticks...`").queue();
+                        }
+                    } else if (command[1].equalsIgnoreCase("list")) {
+                        StringBuilder builder = new StringBuilder("```\nThe current name list is:\n");
+                        for (String name : settings.getNames()) {
+                            builder.append(name).append("\n");
+                        }
+                        event.reply(builder.append("\n```").toString()).queue();
                     }
-                    if (settings.containsName(name)) {
-                        event.reply("That name is already in the list.").queue();
-                    } else {
-                        settings.addName(name);
-                        ServerDatabase.setSettings(ID, settings);
-                        event.reply("Added " + name + " to the name list. Wowza!").queue();
-                    }
-                } else if (event.getSubcommandName().equalsIgnoreCase("remove")) {
-                    String name = Objects.requireNonNull(event.getOption("name")).getAsString().trim();
-                    if (name.isBlank()) {
-                        event.reply("That's a nothing burger... (Name cannot be blank)").queue();
-                        return;
-                    }
-                    if (!settings.containsName(name)) {
-                        event.reply("That name is not in the list.").queue();
-                    } else {
-                        settings.removeName(name);
-                        ServerDatabase.setSettings(ID, settings);
-                        event.reply("Removed " + name + " from the name list. Fiddlesticks...").queue();
-                    }
-                } else if (event.getSubcommandName().equalsIgnoreCase("list")) {
-                    StringBuilder builder = new StringBuilder("The current name list is:\n");
-                    for (String name : settings.getNames()) {
-                        builder.append(name).append("\n");
-                    }
-                    event.reply(builder.toString()).queue();
+                }
+                catch (IOException e) {
+                    event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
+                            .setEphemeral(true)
+                            .queue();
                 }
             }
-            catch (IOException e) {
-                event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
-                        .setEphemeral(true)
-                        .queue();
-            }
         }
-        else if (event.getName().equalsIgnoreCase("help")) {
-            event.reply("""
-                    Here are the commands you can use:
+        else {
+            if (command[0].equalsIgnoreCase("help")) {
+                event.reply("""
                     ```
-                    /toggle [on-name-react | on-reply-react] [true | false] - Toggles the bot's reaction triggers.
-                    /names [add | remove] name - Adds/Removes a name to the list of names the bot reacts to.
-                    /names list - Lists all the names the bot reacts to.
+                    Here are the commands you can use:
+                    
+                    /toggle [on-name-react | on-reply-react] [true | false] - Toggles the bot's reaction triggers. (Default: false for both)
+                    /names [add | remove] name - Adds/Removes a name to the list of names the bot reacts to. (case-insensitive)
+                    /names list - Lists all the names the bot reacts to. (Default names: 'react bot', 'reactbot', 'rbod')
+                    /reset - Resets the bot's settings for this server to default.
                     /help - This one.
                     ```
                     """).queue();
+            }
+            else if (command[0].equalsIgnoreCase("reset")) {
+                try {
+                    ServerDatabase.removeServer(ID);
+                    ServerDatabase.addServer(ID);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                event.reply("`Settings reset for this server.`").queue();
+            }
         }
     }
 
@@ -276,7 +299,6 @@ public class RBOD extends ListenerAdapter {
 
         // Respond to direct messages
         if (!event.isFromGuild()) {
-//            if (event.getMessage().getAuthor().equals(self)) return;
             event.getChannel()
                     .sendMessage(reply)
                     .queue();
@@ -303,10 +325,10 @@ public class RBOD extends ListenerAdapter {
         }
         if (settings == null) {
             event.getMessage()
-                    .reply("Settings not found. Creating new settings for server. Use /toggle and try interacting with me again.")
+                    .reply("`Settings not found. Creating new settings for server. Use /toggle and try interacting with me again.`")
                     .queue();
             try {
-                ServerDatabase.addServer(event.getGuild().getId());
+                ServerDatabase.addServer(ID);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -316,7 +338,7 @@ public class RBOD extends ListenerAdapter {
         // Respond to name call
         if (settings.isReactOnName()) {
             for (String name : settings.getNames()) {
-                if (message.toLowerCase().contains(name.toLowerCase())) {
+                if (message.toLowerCase().contains(name)) {
                     event.getMessage()
                             .reply(reply)
                             .queue();
@@ -327,8 +349,11 @@ public class RBOD extends ListenerAdapter {
         }
         // Respond to reply
         if (settings.isReactOnReply()) {
-            if (event.getMessage().getType().equals(MessageType.INLINE_REPLY) &&
-                    event.getMessage().getReferencedMessage().getAuthor().equals(self)) {
+            Message referencedMessage = event.getMessage().getReferencedMessage();
+            if (referencedMessage == null) {
+                return;
+            }
+            if (event.getMessage().getType().equals(MessageType.INLINE_REPLY) && referencedMessage.getAuthor().equals(self)) {
                 event.getMessage()
                         .reply(reply)
                         .queue();
@@ -338,7 +363,7 @@ public class RBOD extends ListenerAdapter {
 
     @Override
     public void onShutdown(@NotNull ShutdownEvent event) {
-        System.out.println("Bot is shutting down...");
+        System.out.println(systemMessagePrefix + "Bot is shutting down...");
     }
 
     // Message when bot joins a guild/server

@@ -12,6 +12,7 @@ public class ServerDatabase {
     private static final File databaseFile = new File("databases/guilds.json");
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    // Create database file if none exists, then configure ObjectMapper
     public static void init() {
         if (!databaseFile.exists()) {
             try {
@@ -61,8 +62,8 @@ public class ServerDatabase {
         }
     }
 
+    // IOException thrown from if statement is handled in main code
     public static void addServer(String serverId) throws IOException {
-        // If server exists in database, ignore
         JsonNode node = (databaseFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(databaseFile);
         if (node.has(serverId)) {
             throw new IOException("Server already exists in database.");
@@ -71,12 +72,14 @@ public class ServerDatabase {
         mapper.writeValue(databaseFile, node);
     }
 
+    // if the server was never in the database (somehow), then do nothing
     public static void removeServer(String serverId) throws IOException {
         JsonNode node = mapper.readTree(databaseFile);
         if (!node.has(serverId)) {
             return;
         }
-        mapper.writeValue(databaseFile, ((ObjectNode) node).remove(serverId));
+        ((ObjectNode) node).remove(serverId);
+        mapper.writeValue(databaseFile, node);
     }
 
     public static SettingsObj getSettings(String serverId) throws IOException {

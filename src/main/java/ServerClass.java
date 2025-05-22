@@ -1,5 +1,6 @@
 import java.io.Serializable;
 
+// Serializable probably does nothing here since this class is only used to show server info in the CLI
 public class ServerClass implements Serializable {
     String serverId;
     SettingsObj settings;

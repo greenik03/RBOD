@@ -6,7 +6,7 @@
 ___
 The token for the bot. A string of random characters that should be the only line of the
 text document. \
-**<u>WARNING: Make sure to never expose your token to anyone else in any way!</u>
+**WARNING: Make sure to never expose your token to anyone else in any way!
 Doing so allows anyone to control the bot with their own code. 
 Should something like this happen, reset the token in your Discord Developer Portal!**
 
