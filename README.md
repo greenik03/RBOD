@@ -4,7 +4,7 @@ If you're unfamiliar with jacksfilms or ReactBot, consider watching [this video]
 It's an RNG-based chatbot where its responses are randomly chosen from a text document.
 
 ### Attribution
-Original ReactBot program developed by [Cuyoya](https://linktr.ee/Cuyoya), El_Mander and Astrapboy
+Original ReactBot program developed by [Cuyoya](https://beacons.ai/cuyoya), El_Mander and Astrapboy
 
 ## How does it work?
 RBOD is to be used in servers, mainly. When a user @mentions the bot, it'll reply to the message with one of the phrases included in phrases.txt, located in the "assets" folder.
