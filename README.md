@@ -3,6 +3,9 @@ RBOD is an implementation of jacksfilms' ReactBot as a Discord bot written in Ja
 If you're unfamiliar with jacksfilms or ReactBot, consider watching [this video](https://www.youtube.com/watch?v=f5Ob7U231ns) to learn more, but the idea for the bot is simple: \
 It's an RNG-based chatbot where its responses are randomly chosen from a text document.
 
+### Attribution
+Original ReactBot program developed by [Cuyoya](https://linktr.ee/Cuyoya), El_Mander and Astrapboy
+
 ## How does it work?
 RBOD is to be used in servers, mainly. When a user @mentions the bot, it'll reply to the message with one of the phrases included in phrases.txt, located in the "assets" folder.
 The user can also directly message the bot to interact with it, but they cannot use the bot's commands this way. \
