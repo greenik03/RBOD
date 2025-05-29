@@ -23,8 +23,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class RBOD extends ListenerAdapter {
@@ -34,19 +32,19 @@ public class RBOD extends ListenerAdapter {
         GatewayIntent.DIRECT_MESSAGES,
         GatewayIntent.MESSAGE_CONTENT
     );
-    static File discordToken = new File("assets/token.txt"),
-        phrases = new File("assets/phrases.txt");
+    static File discordToken = new File("assets/token.txt");
     static Random rng = new Random();
     static String systemMessagePrefix = "[RBOD]: ";
 
     // Start of main method
     public static void main(String[] args) {
-        String token = readSingleLineFile(discordToken);
+        String token = RBODUtils.readSingleLineFile(discordToken);
         JDA jda = JDABuilder.createLight(token, intents)
                 .addEventListeners(new RBOD())
                 .setActivity(Activity.customStatus("It's reacting time!"))
                 .build();
 
+        //TODO: Add commands (and database) for custom phrases
         CommandListUpdateAction commands = jda.updateCommands();
         //Slash commands are added here. Should be server-only.
         commands.addCommands(Commands.slash("toggle", "Toggles the bot's response activations.")
@@ -126,35 +124,6 @@ public class RBOD extends ListenerAdapter {
     }
     // End of main method
 
-    // Read text in assets/phrases.txt, used as variable in main
-    static List<String> readPhrasesFromFile() {
-        if (phrases.exists() && phrases.canRead()) {
-            try {
-                return Files.readAllLines(phrases.toPath(), StandardCharsets.UTF_8);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        else {
-            throw new RuntimeException("phrases.txt does not exist or cannot be read. Read assets/guide.md for more info.");
-        }
-    }
-
-    // Read token from assets/token.txt
-    static String readSingleLineFile(File file) {
-        if (file.exists() && file.canRead()) {
-            try {
-                return Files.readString(file.toPath(), StandardCharsets.UTF_8)
-                        .trim();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        else {
-            throw new RuntimeException(file.getAbsolutePath() + " does not exist or cannot be read. Read assets/guide.md for more info.");
-        }
-    }
-
     static void printCLIUsage() {
         System.out.println(systemMessagePrefix + "Here are the commands you can use:");
         System.out.println("\tlistservers - Lists all the servers in the database.");
@@ -192,6 +161,7 @@ public class RBOD extends ListenerAdapter {
                 .toLowerCase()
                 .trim()
                 .split("\\s+");
+        // var command = [command, subcommand, ...]
         if (command.length >= 2) {
             if (command[0].equalsIgnoreCase("toggle")) {
                 try {
@@ -264,12 +234,13 @@ public class RBOD extends ListenerAdapter {
         }
         else {
             if (command[0].equalsIgnoreCase("help")) {
+                //TODO: Add phrases commands after implementing them
                 event.reply("""
                     ```
                     Here are the commands you can use:
                     
                     /toggle [on-name-react | on-reply-react] [true | false] - Toggles the bot's reaction triggers. (Default: false for both)
-                    /names [add | remove] name - Adds/Removes a name to the list of names the bot reacts to. (case-insensitive)
+                    /names [add | remove] name - Adds/Removes a name to/from the list of names the bot reacts to. (case-insensitive)
                     /names list - Lists all the names the bot reacts to. (Default names: 'react bot', 'reactbot', 'rbod')
                     /reset - Resets the bot's settings for this server to default.
                     /help - This one.
@@ -295,7 +266,8 @@ public class RBOD extends ListenerAdapter {
         if (event.getAuthor().equals(self))
             return;
 
-        List<String> phrasesList = readPhrasesFromFile();
+        //TODO: if phrase starts with "edit: ", make message actually edited (if possible)
+        List<String> phrasesList = RBODUtils.readPhrasesFromFile();
         int phraseIndex = rng.nextInt(0, phrasesList.size());
         String reply = phrasesList.get(phraseIndex).trim();
 
@@ -349,14 +321,13 @@ public class RBOD extends ListenerAdapter {
         // Respond to name call
         if (settings.isReactOnName()) {
             for (String name : settings.getNames()) {
-                if (message.toLowerCase().contains(name)) {
+                if (RBODUtils.messageContainsExactName(message, name)) {
                     event.getMessage()
                             .reply(reply)
                             .queue();
-                    break;
+                    return;
                 }
             }
-            return;
         }
         // Respond to reply
         if (settings.isReactOnReply()) {
