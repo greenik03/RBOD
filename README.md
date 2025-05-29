@@ -24,27 +24,33 @@ The slash commands, by default, are enabled for members with `Manage Messages` p
 1. Clone the repository and open the project in your IDE
    - if you get an error about Gradle not being set up properly, then set the JDK version to 20 (that's the version the bot was developed in) or higher, and make sure the following is included in build.gradle:
    ```gradle
-    repositories {
-        mavenCentral()
-        maven { url = 'https://jitpack.io' }
-    }
+   plugins {
+      id 'java'
+      id 'com.gradleup.shadow' version '8.3.6'
+   }
+   repositories {
+      mavenCentral()
+      maven { url = 'https://jitpack.io' }
+   }
    dependencies {
-        implementation("net.dv8tion:JDA:5.5.1") {
-            exclude module: 'opus-java' // required for encoding audio into opus, not needed if audio is already provided in opus encoding
-            exclude module: 'tink' // required for encrypting and decrypting audio
-        }
-        implementation("ch.qos.logback:logback-classic:1.5.18")
-        implementation('com.fasterxml.jackson.core:jackson-databind:2.18.3')
-    }
-   jar {
-      manifest {
-         attributes "Main-Class": "g03.discord.rbod.RBOD"
+      implementation("net.dv8tion:JDA:5.5.1") {
+         exclude module: 'opus-java' // required for encoding audio into opus, not needed if audio is already provided in opus encoding
+         exclude module: 'tink' // required for encrypting and decrypting audio
       }
-      duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-      from {
-         configurations.runtimeClasspath.collect {it.isDirectory()? it : zipTree(it)}
+      implementation("ch.qos.logback:logback-classic:1.5.18")
+      implementation('com.fasterxml.jackson.core:jackson-databind:2.18.3')
+   }
+   shadowJar {
+      minimize() // This will remove unused classes
+      archiveClassifier.set('')
+      manifest {
+         attributes 'Main-Class': 'RBOD'
       }
    }
+
+   // Make the regular jar task depend on shadowJar
+   jar.enabled = false
+   assemble.dependsOn shadowJar
     ```
 2. Run the build task in Gradle to create a .jar file. It should be named as 'rbod-*[version]*.jar'.
 3. Make sure your OS has JRE, at least version 20. If you're not sure what version you have, open a terminal/CMD and run `java -version`. If you don't have version 20 or newer, [download it from here](https://adoptium.net/temurin/releases/).
