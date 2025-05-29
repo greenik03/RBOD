@@ -67,6 +67,7 @@ public class RBOD extends ListenerAdapter {
                 Commands.slash("help", "Lists all the commands.")
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
+                // TODO: Add option to reset settings, phrases, or both
                 Commands.slash("reset", "Resets the bot's settings for this server to default.")
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
@@ -163,6 +164,7 @@ public class RBOD extends ListenerAdapter {
                 .split("\\s+");
         // var command = [command, subcommand, ...]
         if (command.length >= 2) {
+            //TODO: Change if-else's for command to switch
             if (command[0].equalsIgnoreCase("toggle")) {
                 try {
                     if (command[1].equalsIgnoreCase("on-name-react")) {
@@ -184,6 +186,7 @@ public class RBOD extends ListenerAdapter {
                 }
             }
             else if (command[0].equalsIgnoreCase("names")) {
+                //TODO: Add check for name reactions being on
                 try {
                     if (command[1].equalsIgnoreCase("add")) {
                         String name = Objects.requireNonNull(event.getOption("name"))

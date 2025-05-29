@@ -12,6 +12,7 @@ import java.util.List;
 
 public class ServerDatabase {
     private static final File databaseFile = new File("databases/guilds.json");
+    //TODO: Add customPhrasesFile (databases/custom_phrases.json)
     private static final ObjectMapper mapper = new ObjectMapper();
 
     // Create database file if none exists, then configure ObjectMapper
@@ -35,6 +36,7 @@ public class ServerDatabase {
         else {
             System.out.println("Database file already exists.");
         }
+        //TODO: Do same check for customPhrasesFile
         mapper.configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
@@ -72,6 +74,7 @@ public class ServerDatabase {
         }
         ((ObjectNode) node).set(serverId, mapper.valueToTree(new SettingsObj()));
         mapper.writeValue(databaseFile, node);
+        //TODO: Expand this to add server to customPhrasesFile
     }
 
     // if the server was never in the database (somehow), then do nothing
@@ -82,6 +85,7 @@ public class ServerDatabase {
         }
         ((ObjectNode) node).remove(serverId);
         mapper.writeValue(databaseFile, node);
+        //TODO: Expand this to remove server from customPhrasesFile
     }
 
     public static SettingsObj getSettings(String serverId) throws IOException {
@@ -97,4 +101,6 @@ public class ServerDatabase {
         ((ObjectNode) node).set(serverId, mapper.valueToTree(settings));
         mapper.writeValue(databaseFile, node);
     }
+
+    //TODO: Add methods for adding/removing phrases from customPhrasesFile
 }
