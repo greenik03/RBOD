@@ -43,3 +43,4 @@ bin/
 /assets/token.txt
 /assets/phrases.txt
 /databases/guilds.json
+/databases/custom_phrases.json

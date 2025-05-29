@@ -86,10 +86,22 @@ public class RBOD extends ListenerAdapter {
                 .forEach(guild -> {
                     try {
                         ServerDatabase.addServer(guild.getId());
+                        ServerDatabase.addServerToCustomPhrases(guild.getId());
                     }
                     catch (IOException e) {
                         if (e.getMessage().equals("Server already exists in database.")) {
-                            System.out.println(systemMessagePrefix + "Server already exists in database. Skipping " + guild.getId() + " ...");
+                            System.out.println(systemMessagePrefix + "Server already exists in settings database. Skipping " + guild.getId() + "...");
+                        }
+                        else {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    try {
+                        ServerDatabase.addServerToCustomPhrases(guild.getId());
+                    }
+                    catch (IOException e) {
+                        if (e.getMessage().equals("Server already exists in database.")) {
+                            System.out.println(systemMessagePrefix + "Server already exists in phrases database. Skipping " + guild.getId() + "...");
                         }
                         else {
                             throw new RuntimeException(e);
@@ -370,6 +382,7 @@ public class RBOD extends ListenerAdapter {
         }
         try {
             ServerDatabase.addServer(event.getGuild().getId());
+            ServerDatabase.addServerToCustomPhrases(event.getGuild().getId());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -379,6 +392,7 @@ public class RBOD extends ListenerAdapter {
     public void onGuildLeave(@NotNull GuildLeaveEvent event) {
         try {
             ServerDatabase.removeServer(event.getGuild().getId());
+            ServerDatabase.removeServerFromCustomPhrases(event.getGuild().getId());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -11,32 +11,36 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ServerDatabase {
-    private static final File databaseFile = new File("databases/guilds.json");
-    //TODO: Add customPhrasesFile (databases/custom_phrases.json)
+    private static final File databaseFile = new File("databases/guilds.json"),
+        customPhrasesFile = new File("databases/custom_phrases.json");
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    // Create database file if none exists, then configure ObjectMapper
-    public static void init() {
-        if (!databaseFile.exists()) {
+    private static void createDatabaseFile(File file) {
+        if (!file.exists()) {
             try {
-                if (databaseFile.createNewFile()) {
-                    if (databaseFile.setReadable(true) && databaseFile.setWritable(true))
-                        System.out.println("Created new database file.");
+                if (file.createNewFile()) {
+                    if (file.setReadable(true) && file.setWritable(true))
+                        System.out.println("Created new database file: " + file.getName());
                     else
-                        throw new RuntimeException("Cannot set read/write permissions on database file.");
+                        throw new RuntimeException("Cannot set read/write permissions on database file: " + file.getName());
                 }
             }
             catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
-        else if (!databaseFile.canRead() || !databaseFile.canWrite()) {
-            throw new RuntimeException("Cannot read/write to database file.");
+        else if (!file.canRead() || !file.canWrite()) {
+            throw new RuntimeException("Cannot read/write to database file: " + file.getName());
         }
         else {
-            System.out.println("Database file already exists.");
+            System.out.println("Database file " + file.getName() + " already exists.");
         }
-        //TODO: Do same check for customPhrasesFile
+    }
+
+    // Create database file if none exists, then configure ObjectMapper
+    public static void init() {
+        createDatabaseFile(databaseFile);
+        createDatabaseFile(customPhrasesFile);
         mapper.configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
@@ -74,7 +78,14 @@ public class ServerDatabase {
         }
         ((ObjectNode) node).set(serverId, mapper.valueToTree(new SettingsObj()));
         mapper.writeValue(databaseFile, node);
-        //TODO: Expand this to add server to customPhrasesFile
+    }
+    public static void addServerToCustomPhrases(String serverId) throws IOException {
+        JsonNode node = (customPhrasesFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(customPhrasesFile);
+        if (node.has(serverId)) {
+            throw new IOException("Server already exists in database.");
+        }
+        ((ObjectNode) node).set(serverId, mapper.valueToTree(new ArrayList<String>()));
+        mapper.writeValue(customPhrasesFile, node);
     }
 
     // if the server was never in the database (somehow), then do nothing
@@ -85,7 +96,14 @@ public class ServerDatabase {
         }
         ((ObjectNode) node).remove(serverId);
         mapper.writeValue(databaseFile, node);
-        //TODO: Expand this to remove server from customPhrasesFile
+    }
+    public static void removeServerFromCustomPhrases(String serverId) throws IOException {
+        JsonNode node = mapper.readTree(customPhrasesFile);
+        if (!node.has(serverId)) {
+            return;
+        }
+        ((ObjectNode) node).remove(serverId);
+        mapper.writeValue(customPhrasesFile, node);
     }
 
     public static SettingsObj getSettings(String serverId) throws IOException {
@@ -102,5 +120,17 @@ public class ServerDatabase {
         mapper.writeValue(databaseFile, node);
     }
 
-    //TODO: Add methods for adding/removing phrases from customPhrasesFile
+    public static List<String> getCustomPhrases(String serverId) throws IOException {
+        if (!customPhrasesFile.exists() || customPhrasesFile.length() == 0) {
+            return null;
+        }
+        JsonNode node = mapper.readTree(customPhrasesFile);
+        return !node.has(serverId)? null : mapper.treeToValue(node.get(serverId), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+    }
+
+    public static void setCustomPhrases(String serverId, List<String> phrases) throws IOException {
+        JsonNode node = (customPhrasesFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(customPhrasesFile);
+        ((ObjectNode) node).set(serverId, mapper.valueToTree(phrases));
+        mapper.writeValue(customPhrasesFile, node);
+    }
 }
