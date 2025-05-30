@@ -4,7 +4,7 @@ If you're unfamiliar with jacksfilms or ReactBot, consider watching [this video]
 It's an RNG-based chatbot where its responses are randomly chosen from a text document.
 
 ### Attribution
-Original ReactBot program developed by [Cuyoya](https://beacons.ai/cuyoya), El_Mander and Astrapboy
+Original ReactBot program developed by [Cuyoya](https://beacons.ai/cuyoya), El_Mander, and Astrapboy
 
 ## How does it work?
 RBOD is to be used in servers, mainly. When a user @mentions the bot, it'll reply to the message with one of the phrases included in phrases.txt, located in the "assets" folder.
@@ -13,16 +13,29 @@ Interaction by @mention is always enabled, but there are optional triggers that 
 - `/toggle on-reply-react [true/false]` - toggles the option for the bot to reply to messages from users where they reply to the bot's messages. **Default: `false`**
 - `/toggle on-name-react [true/false]` - toggles the option for the bot to reply to messages from users where they refer to the bot by name, without a @mention. While there are names the bot responds to by default when joining a server, they can be changed with the `/names` commands. **Default: `false`**
 - `/names list` - Lists the names the bot can currently respond to. By default, i.e. when the bot first joins a server, this list contains `react bot, reactbot, rbod`.
-- `/names add [name]` - Adds the name the user inputs to the list of names. (case-insensitive)
-- `/names remove [name]` - Removes the name the user inputs from the list of names. (case-insensitive)
-- `/reset` - Resets the bot's settings for the server the command was executed from back to default.
+- `/names add [name]` - Adds [name] the user inputs to the list of names. (case-insensitive)
+- `/names remove [name]` - Removes [name] the user inputs from the list of names. (case-insensitive)
+- `/phrases add [phrase]` - Adds [phrase] to the list of server-only (custom) phrases for the bot to use. (case-sensitive; supports Markdown, emojis, and new lines with '\n')
+- `/phrases list` - Lists all custom phrases for the server, with indexes. **Default: empty**
+- `/phrases remove [index]` - Removes the phrase at the given index from the list of custom phrases.
+- `/reset [data]` - Resets the bot's settings and/or custom phrases for the server the command was executed from back to default.
 - `/help` - Brings up the list of commands.
 
 The slash commands, by default, are enabled for members with `Manage Messages` permission, though they can be overridden for use by specific users or roles by going into `Server Settings -> Integrations`.
 
-## Build
-1. Clone the repository and open the project in your IDE
-   - if you get an error about Gradle not being set up properly, then set the JDK version to 20 (that's the version the bot was developed in) or higher, and make sure the following is included in build.gradle:
+## Self-hosting
+
+### Making the bot
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Create a new application or use a pre-existing one for the bot.
+3. In the Installation section, select only `Guild Install` as the installation context. Then, in Default Install Settings, include the scopes `applications.commands` and `bot`, with the permissions being `Embed Links, Read Message History, Send Messages, Send Messages in Threads, View Channels`.
+4. In the Bot section, copy the token and keep it somewhere safe (you will need it).
+   - If there's no option to copy the token, reset it, and it should give you a new one you can then copy.
+5. In the same section, turn on `Message Content Intent`.
+
+### Building the JAR file
+1. Clone the repository and open the project in your IDE.
+   - if you get an error about Gradle not being set up properly, then set the JDK version to 20 or higher and make sure the following is included in build.gradle:
    ```gradle
    plugins {
       id 'java'
@@ -41,21 +54,19 @@ The slash commands, by default, are enabled for members with `Manage Messages` p
       implementation('com.fasterxml.jackson.core:jackson-databind:2.18.3')
    }
    shadowJar {
-      minimize() // This will remove unused classes
+      minimize()
       archiveClassifier.set('')
       manifest {
-         attributes 'Main-Class': 'RBOD'
+         attributes 'Main-Class': 'RBOD' // this may need to change if the main class is in a package
       }
    }
-
-   // Make the regular jar task depend on shadowJar
    jar.enabled = false
    assemble.dependsOn shadowJar
     ```
-2. Run the build task in Gradle to create a .jar file. It should be named as 'rbod-*[version]*.jar'.
+2. Run the build task in Gradle to create a .jar file. 
 3. Make sure your OS has JRE, at least version 20. If you're not sure what version you have, open a terminal/CMD and run `java -version`. If you don't have version 20 or newer, [download it from here](https://adoptium.net/temurin/releases/).
    - If you're running the .jar off of the IDE, then skip this step.
-4. Locate the newly created .jar in build/libs. 
+4. Locate the newly created .jar in build/libs. It should be named as 'rbod-*[version]*.jar'.
    - If you're not running the .jar using the IDE, you can take the .jar file and place it in a dedicated folder wherever you like.
 5. Create an "assets" folder if there isn't one and create the necessary files in the folder. ([check guide.md for more info](assets/guide.md))
 6. Create a folder called "databases" and leave it empty.
