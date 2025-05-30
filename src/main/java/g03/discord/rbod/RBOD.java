@@ -7,12 +7,14 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.IntegrationType;
+import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -24,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Stream;
 
 public class RBOD extends ListenerAdapter {
     // Initialize variables
@@ -70,16 +73,16 @@ public class RBOD extends ListenerAdapter {
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
                 Commands.slash("reset", "Resets the bot's settings and/or custom phrases for this server to default.")
-                        .addOption(OptionType.STRING, "data", "The data to reset.", false)
+                        .addOption(OptionType.STRING, "data", "The data to reset.", false, true)
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
                 Commands.slash("phrases", "Add/Remove server-specific phrases.")
                         .addSubcommands(
-                                new SubcommandData("add", "Adds a phrase to the list of phrases the bot reacts to.")
-                                        .addOption(OptionType.STRING, "phrase", "The phrases you want added for this server.", true),
-                                new SubcommandData("remove", "Removes a phrase from the list of phrases the bot reacts to.")
-                                        .addOption(OptionType.INTEGER, "index", "The index of the phrase to remove. (Use the list subcommand for reference.)", true),
-                                new SubcommandData("list", "Lists all the phrases the bot reacts to.")
+                                new SubcommandData("add", "Adds a phrase to the custom phrases list.")
+                                        .addOption(OptionType.STRING, "phrase", "The phrase to add for this server.", true),
+                                new SubcommandData("remove", "Removes a phrase from the custom phrases list.")
+                                        .addOption(OptionType.INTEGER, "index", "The index of the phrase to remove. (Use the list subcommand for reference)", true),
+                                new SubcommandData("list", "Lists all the phrases for this server, with indexes.")
                         )
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
@@ -210,7 +213,6 @@ public class RBOD extends ListenerAdapter {
                 break;
 
             case "names":
-                //TODO: Add check for name reactions being on
                 try {
                     if (command[1].equalsIgnoreCase("add")) {
                         String name = Objects.requireNonNull(event.getOption("name"))
@@ -362,7 +364,7 @@ public class RBOD extends ListenerAdapter {
                     (Default names: 'react bot', 'reactbot', 'rbod')
                     
                     /phrases add [phrase] - Adds [phrase] to the list of custom phrases for this server. (case-sensitive)
-                    (Markdown supported, add '\\n' for a new line)
+                    (Markdown and emoji supported, add '\\n' for a new line)
                     
                     /phrases remove [index] - Removes the custom phrase at the specified index from the list of custom phrases for this server.
                     (You can find the index by typing '/phrases list')
@@ -382,6 +384,18 @@ public class RBOD extends ListenerAdapter {
             default:
                 event.reply("`Unknown command. Type '/help' for a list of commands.`").queue();
             break;
+        }
+    }
+
+    @Override
+    public void onCommandAutoCompleteInteraction(@NotNull CommandAutoCompleteInteractionEvent event) {
+        if (event.getName().equalsIgnoreCase("reset") && event.getFocusedOption().getName().equalsIgnoreCase("data")) {
+            String[] options = new String[] {"all", "settings", "phrases"};
+            List<Command.Choice> choices = Stream.of(options)
+                    .filter(word -> word.startsWith(event.getFocusedOption().getValue()))
+                    .map(word -> new Command.Choice(word, word))
+                    .toList();
+            event.replyChoices(choices).queue();
         }
     }
 
