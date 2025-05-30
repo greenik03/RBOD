@@ -41,7 +41,7 @@ public class RBOD extends ListenerAdapter {
 
     // Start of main method
     public static void main(String[] args) {
-        String token = RBODUtils.readSingleLineFile(discordToken);
+        String token = RBODUtils.readTokenFromFile(discordToken);
         JDA jda = JDABuilder.createLight(token, intents)
                 .addEventListeners(new RBOD())
                 .setActivity(Activity.customStatus("It's reacting time!"))
@@ -406,8 +406,19 @@ public class RBOD extends ListenerAdapter {
         if (event.getAuthor().equals(self))
             return;
 
-        //TODO: implement customPhrasesList
+        String ID = event.getGuild().getId();
         List<String> phrasesList = RBODUtils.readPhrasesFromFile();
+        List<String> customPhrasesList;
+        try {
+            customPhrasesList = ServerDatabase.getCustomPhrases(ID);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (customPhrasesList != null && !customPhrasesList.isEmpty()) {
+            phrasesList.addAll(customPhrasesList);
+        }
+
         int phraseIndex = rng.nextInt(0, phrasesList.size());
         String reply = phrasesList.get(phraseIndex).trim();
 
@@ -441,7 +452,6 @@ public class RBOD extends ListenerAdapter {
         }
 
         SettingsObj settings;
-        String ID = event.getGuild().getId();
         try {
             settings = ServerDatabase.getSettings(ID);
         } catch (IOException e) {

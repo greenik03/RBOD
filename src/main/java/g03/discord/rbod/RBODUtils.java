@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 public class RBODUtils {
     static File phrases = new File("assets/phrases.txt");
 
-    // Read text in assets/phrases.txt, used as variable in main
+    // Read text in assets/phrases.txt
     static List<String> readPhrasesFromFile() {
         if (phrases.exists() && phrases.canRead()) {
             try {
@@ -25,7 +25,7 @@ public class RBODUtils {
     }
 
     // Read token from assets/token.txt
-    static String readSingleLineFile(File file) {
+    static String readTokenFromFile(File file) {
         if (file.exists() && file.canRead()) {
             try {
                 return Files.readString(file.toPath(), StandardCharsets.UTF_8)
