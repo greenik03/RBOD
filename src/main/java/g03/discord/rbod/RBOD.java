@@ -44,17 +44,18 @@ public class RBOD extends ListenerAdapter {
                 .setActivity(Activity.customStatus("It's reacting time!"))
                 .build();
 
-        //TODO: Add commands (and database) for custom phrases
         CommandListUpdateAction commands = jda.updateCommands();
         //Slash commands are added here. Should be server-only.
-        commands.addCommands(Commands.slash("toggle", "Toggles the bot's response activations.")
-                .addSubcommands(
-                        new SubcommandData("on-name-react", "Toggles the bot's reaction on name mentions.")
-                                .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
-                        new SubcommandData("on-reply-react", "Toggles the bot's reaction on replies.")
-                                .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true)
-                ).setIntegrationTypes(IntegrationType.GUILD_INSTALL)
-                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
+        commands.addCommands(
+                Commands.slash("toggle", "Toggles the bot's response activations.")
+                        .addSubcommands(
+                                new SubcommandData("on-name-react", "Toggles the bot's reaction on name mentions.")
+                                        .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
+                                new SubcommandData("on-reply-react", "Toggles the bot's reaction on replies.")
+                                        .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true)
+                        )
+                        .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
                 Commands.slash("names", "Change the names the bot reacts to. (Requires name reactions to be on!)")
                         .addSubcommands(
                                 new SubcommandData("add", "Adds a name to the list of names the bot reacts to.")
@@ -62,13 +63,24 @@ public class RBOD extends ListenerAdapter {
                                 new SubcommandData("remove", "Removes a name from the list of names the bot reacts to.")
                                         .addOption(OptionType.STRING, "name", "The name to remove from the list.", true),
                                 new SubcommandData("list", "Lists all the names the bot reacts to.")
-                        ).setIntegrationTypes(IntegrationType.GUILD_INSTALL)
-                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
+                        )
+                        .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
                 Commands.slash("help", "Lists all the commands.")
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
-                // TODO: Add option to reset settings, phrases, or both
-                Commands.slash("reset", "Resets the bot's settings for this server to default.")
+                Commands.slash("reset", "Resets the bot's settings and/or custom phrases for this server to default.")
+                        .addOption(OptionType.STRING, "data", "The data to reset.", false)
+                        .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
+                Commands.slash("phrases", "Add/Remove server-specific phrases.")
+                        .addSubcommands(
+                                new SubcommandData("add", "Adds a phrase to the list of phrases the bot reacts to.")
+                                        .addOption(OptionType.STRING, "phrase", "The phrases you want added for this server.", true),
+                                new SubcommandData("remove", "Removes a phrase from the list of phrases the bot reacts to.")
+                                        .addOption(OptionType.INTEGER, "index", "The index of the phrase to remove. (Use the list subcommand for reference.)", true),
+                                new SubcommandData("list", "Lists all the phrases the bot reacts to.")
+                        )
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
         ).queue();
@@ -175,9 +187,8 @@ public class RBOD extends ListenerAdapter {
                 .trim()
                 .split("\\s+");
         // var command = [command, subcommand, ...]
-        if (command.length >= 2) {
-            //TODO: Change if-else's for command to switch
-            if (command[0].equalsIgnoreCase("toggle")) {
+        switch (command[0]) {
+            case "toggle":
                 try {
                     if (command[1].equalsIgnoreCase("on-name-react")) {
                         boolean reactOnName = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
@@ -196,8 +207,9 @@ public class RBOD extends ListenerAdapter {
                             .setEphemeral(true)
                             .queue();
                 }
-            }
-            else if (command[0].equalsIgnoreCase("names")) {
+                break;
+
+            case "names":
                 //TODO: Add check for name reactions being on
                 try {
                     if (command[1].equalsIgnoreCase("add")) {
@@ -245,32 +257,131 @@ public class RBOD extends ListenerAdapter {
                             .setEphemeral(true)
                             .queue();
                 }
-            }
-        }
-        else {
-            if (command[0].equalsIgnoreCase("help")) {
-                //TODO: Add phrases commands after implementing them
+            break;
+
+            case "phrases":
+                try {
+                    if (command[1].equalsIgnoreCase("add")) {
+                        String phrase = Objects.requireNonNull(event.getOption("phrase")).getAsString();
+                        List<String> phrases = ServerDatabase.getCustomPhrases(ID);
+                        if (phrases == null || phrases.isEmpty()) {
+                            phrases = new ArrayList<>();
+                        }
+                        if (phrases.contains(phrase)) {
+                            event.reply("`That phrase is already in the list.`").queue();
+                            return;
+                        }
+                        phrases.add(phrase);
+                        ServerDatabase.setCustomPhrases(ID, phrases);
+                        event.reply("`Added the following phrase to the list: '" + phrase + "'`").queue();
+                    }
+                    else if (command[1].equalsIgnoreCase("remove")) {
+                        int index = Objects.requireNonNull(event.getOption("index")).getAsInt() - 1;
+                        List<String> phrases = ServerDatabase.getCustomPhrases(ID);
+                        if (phrases == null || phrases.isEmpty()) {
+                            event.reply("`There are no custom phrases for this server.`").queue();
+                            return;
+                        }
+                        if (index < 0 || index >= phrases.size()) {
+                            event.reply("`That index is out of bounds.`").queue();
+                        }
+                        else {
+                            phrases.remove(index);
+                            ServerDatabase.setCustomPhrases(ID, phrases);
+                            event.reply("`Removed custom phrase " + (index + 1) + " from the list.`").queue();
+                        }
+                    }
+                    else if (command[1].equalsIgnoreCase("list")) {
+                        List<String> phrases = ServerDatabase.getCustomPhrases(ID);
+                        if (phrases == null || phrases.isEmpty()) {
+                            event.reply("`There are no custom phrases for this server.`").queue();
+                            return;
+                        }
+                        StringBuilder builder = new StringBuilder("```\nThe current custom phrases list is:\n");
+                        for (int i = 0; i < phrases.size(); i++) {
+                            builder.append(i + 1).append(". ").append(phrases.get(i)).append("\n");
+                        }
+                        builder.append("\n```");
+                        event.reply(builder.toString()).queue();
+                    }
+                }
+                catch (IOException e) {
+                    event.reply("Something went wrong while setting the server's custom phrases. \n" + e.getMessage())
+                            .setEphemeral(true)
+                            .queue();
+                }
+            break;
+
+            case "reset":
+                String option = event.getOption("data") == null? "" : Objects.requireNonNull(event.getOption("data")).getAsString();
+                if (option.isBlank() || option.equalsIgnoreCase("all")) {
+                    try {
+                        ServerDatabase.removeServer(ID);
+                        ServerDatabase.addServer(ID);
+                        ServerDatabase.removeServerFromCustomPhrases(ID);
+                        ServerDatabase.addServerToCustomPhrases(ID);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    event.reply("`Settings and phrases reset for this server.`").queue();
+                }
+                else if (option.equalsIgnoreCase("settings")) {
+                    try {
+                        ServerDatabase.removeServer(ID);
+                        ServerDatabase.addServer(ID);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    event.reply("`Settings reset for this server.`").queue();
+                }
+                else if (option.equalsIgnoreCase("phrases")) {
+                    try {
+                        ServerDatabase.removeServerFromCustomPhrases(ID);
+                        ServerDatabase.addServerToCustomPhrases(ID);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    event.reply("`Phrases reset for this server.`").queue();
+                }
+                else {
+                    event.reply("`Invalid option. Use 'all' (or just '/reset') for settings and phrases, 'settings', or 'phrases'.`").queue();
+                }
+                break;
+
+            case "help":
                 event.reply("""
                     ```
                     Here are the commands you can use:
                     
-                    /toggle [on-name-react | on-reply-react] [true | false] - Toggles the bot's reaction triggers. (Default: false for both)
-                    /names [add | remove] name - Adds/Removes a name to/from the list of names the bot reacts to. (case-insensitive)
-                    /names list - Lists all the names the bot reacts to. (Default names: 'react bot', 'reactbot', 'rbod')
-                    /reset - Resets the bot's settings for this server to default.
+                    /toggle [on-name-react | on-reply-react] [true | false] - Toggles the bot's reaction triggers.
+                    (Default: false for both)
+                    
+                    /names [add | remove] [name] - Adds/Removes [name] to/from the list of names the bot reacts to. (case-insensitive)
+                    
+                    /names list - Lists all the names the bot reacts to.
+                    (Default names: 'react bot', 'reactbot', 'rbod')
+                    
+                    /phrases add [phrase] - Adds [phrase] to the list of custom phrases for this server. (case-sensitive)
+                    (Markdown supported, add '\\n' for a new line)
+                    
+                    /phrases remove [index] - Removes the custom phrase at the specified index from the list of custom phrases for this server.
+                    (You can find the index by typing '/phrases list')
+                    
+                    /phrases list - Lists all the custom phrases for this server, with indexes.
+                    (Default: empty)
+                    
+                    /reset [data] - Resets the bot's settings and/or custom phrases for this server to default.
+                    (Options: 'all' (or just '/reset') for all, 'settings' for only settings, 'phrases' for only custom phrases)
+                    
                     /help - This one.
                     ```
                     """).queue();
-            }
-            else if (command[0].equalsIgnoreCase("reset")) {
-                try {
-                    ServerDatabase.removeServer(ID);
-                    ServerDatabase.addServer(ID);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                event.reply("`Settings reset for this server.`").queue();
-            }
+            break;
+
+            // This will never appear when using the bot, added in just in case
+            default:
+                event.reply("`Unknown command. Type '/help' for a list of commands.`").queue();
+            break;
         }
     }
 
@@ -281,12 +392,13 @@ public class RBOD extends ListenerAdapter {
         if (event.getAuthor().equals(self))
             return;
 
-        //TODO: if phrase starts with "edit: ", make message actually edited (if possible)
+        //TODO: implement customPhrasesList
         List<String> phrasesList = RBODUtils.readPhrasesFromFile();
         int phraseIndex = rng.nextInt(0, phrasesList.size());
         String reply = phrasesList.get(phraseIndex).trim();
 
         // Check for blank phrases or escape sequences
+        //TODO: if phrase starts with "edit: ", make message actually edited (if possible)
         while (reply.isBlank()) {
             phraseIndex = rng.nextInt(0, phrasesList.size());
             reply = phrasesList.get(phraseIndex).trim();
@@ -354,6 +466,7 @@ public class RBOD extends ListenerAdapter {
                 event.getMessage()
                         .reply(reply)
                         .queue();
+                // return;
             }
         }
     }
