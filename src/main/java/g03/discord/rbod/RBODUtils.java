@@ -20,7 +20,7 @@ public class RBODUtils {
             }
         }
         else {
-            throw new RuntimeException("phrases.txt does not exist or cannot be read. Read assets/guide.md for more info.");
+            throw new RuntimeException("phrases.txt does not exist or cannot be read.");
         }
     }
 
@@ -35,7 +35,7 @@ public class RBODUtils {
             }
         }
         else {
-            throw new RuntimeException(file.getAbsolutePath() + " does not exist or cannot be read. Read assets/guide.md for more info.");
+            throw new RuntimeException(file.getAbsolutePath() + " does not exist or cannot be read.");
         }
     }
 
