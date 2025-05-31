@@ -27,7 +27,10 @@ test {
 }
 
 shadowJar {
-    minimize() // This will remove unused classes
+    // This will remove unused classes, except the logger
+    minimize {
+        exclude(dependency("ch.qos.logback:.*:.*"))
+    }
     archiveClassifier.set('')
     manifest {
         attributes 'Main-Class': 'g03.discord.rbod.RBOD'
