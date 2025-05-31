@@ -142,6 +142,10 @@ public class RBOD extends ListenerAdapter {
                         System.out.println(server.toString());
                     }
                     break;
+                case "ping":
+                    System.out.println(systemMessagePrefix + "Gateway: " + jda.getGatewayPing() + "ms");
+                    jda.getRestPing().queue(time -> System.out.println(systemMessagePrefix + "REST: " + time + "ms"));
+                    break;
                 default:
                     System.out.println(systemMessagePrefix + "Unknown command. Type 'help' to list all commands.");
             }
@@ -155,6 +159,7 @@ public class RBOD extends ListenerAdapter {
     static void printCLIUsage() {
         System.out.println(systemMessagePrefix + "Here are the commands you can use:");
         System.out.println("\tlistservers - Lists all the servers in the database.");
+        System.out.println("\tping - Prints the bot's ping to Discord.");
         System.out.println("\tstop, exit, quit - Stops the bot.");
     }
 
@@ -403,8 +408,14 @@ public class RBOD extends ListenerAdapter {
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         SelfUser self = event.getJDA().getSelfUser();
         // Do not reply to self
-        if (event.getAuthor().equals(self))
+        if (event.getAuthor().equals(self)) {
+            if (RBODUtils.messageContainsExactName(event.getMessage().getContentRaw(), "edit:")) {
+               // this works for some reason
+                String message = event.getMessage().getContentRaw();
+                event.getMessage().editMessage(message).queue();
+            }
             return;
+        }
 
         String ID = event.getGuild().getId();
         List<String> phrasesList = RBODUtils.readPhrasesFromFile();
@@ -423,7 +434,6 @@ public class RBOD extends ListenerAdapter {
         String reply = phrasesList.get(phraseIndex).trim();
 
         // Check for blank phrases or escape sequences
-        //TODO: if phrase starts with "edit: ", make message actually edited (if possible)
         while (reply.isBlank()) {
             phraseIndex = rng.nextInt(0, phrasesList.size());
             reply = phrasesList.get(phraseIndex).trim();

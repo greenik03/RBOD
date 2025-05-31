@@ -11,6 +11,15 @@ Should something like this happen, reset the token in your Discord Developer Por
 
 ## phrases.txt
 A list of phrases the bot will pull from at random. (One non-blank string minimum.) \
-Each phrase must be its own line. Include line breaks in a phrase with '\n'. \
+Phrase formatting is provided below. \
 Blank phrases will be ignored but exclude them for best practice. \
 **The content of this file must not contain anything that breaks [Discord's Community Guidelines](https://discord.com/guidelines).**
+
+# Phrase Formatting
+
+- Markdown and emojis work.
+    - For Markdown, be mindful of formatting or the message may appear incorrect.
+    - Global emojis can be added either by their surrogate pairs or by typing them out like you would on Discord. (ex. `\uD83D\uDC80` or `:skull:`)
+    - Custom emojis should be added in the Discord Developer Portal to ensure they work everywhere. Custom phrases can have emojis from the server they're in, as well as global emojis.
+- Add `\n` anywhere you want your message to break into a new line. (ex. `Line 1\nLine 2`)
+- Add `edit:` anywhere in the message (properly spaced) to make it appear as if it were edited on Discord.
