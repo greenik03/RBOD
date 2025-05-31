@@ -54,7 +54,10 @@ The slash commands, by default, are enabled for members with `Manage Messages` p
       implementation('com.fasterxml.jackson.core:jackson-databind:2.18.3')
    }
    shadowJar {
-      minimize()
+      // replace with just 'minimize()' if you don't care about the logger
+      minimize {
+        exclude(dependency("ch.qos.logback:.*:.*"))
+      }
       archiveClassifier.set('')
       manifest {
          attributes 'Main-Class': 'RBOD' // this may need to change if the main class is in a package
