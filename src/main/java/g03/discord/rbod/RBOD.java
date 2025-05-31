@@ -369,7 +369,9 @@ public class RBOD extends ListenerAdapter {
                     (Default names: 'react bot', 'reactbot', 'rbod')
                     
                     /phrases add [phrase] - Adds [phrase] to the list of custom phrases for this server. (case-sensitive)
-                    (Markdown and emoji supported, add '\\n' for a new line)
+                    \t- Markdown and emojis work
+                    \t- Add '\\n' anywhere to break line into new one
+                    \t- Add 'edit:' anywhere to make message appear edited
                     
                     /phrases remove [index] - Removes the custom phrase at the specified index from the list of custom phrases for this server.
                     (You can find the index by typing '/phrases list')
@@ -417,17 +419,19 @@ public class RBOD extends ListenerAdapter {
             return;
         }
 
-        String ID = event.getGuild().getId();
+        String ID = null;
         List<String> phrasesList = RBODUtils.readPhrasesFromFile();
         List<String> customPhrasesList;
-        try {
-            customPhrasesList = ServerDatabase.getCustomPhrases(ID);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (customPhrasesList != null && !customPhrasesList.isEmpty()) {
-            phrasesList.addAll(customPhrasesList);
+        if (event.isFromGuild()) {
+            ID = event.getGuild().getId();
+            try {
+                customPhrasesList = ServerDatabase.getCustomPhrases(ID);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            if (customPhrasesList != null && !customPhrasesList.isEmpty()) {
+                phrasesList.addAll(customPhrasesList);
+            }
         }
 
         int phraseIndex = rng.nextInt(0, phrasesList.size());
