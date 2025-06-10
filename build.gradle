@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'g03.discord'
-version = '1.1.1'
+version = '1.2-DEVELOPMENT'
 
 repositories {
     mavenCentral()
@@ -33,7 +33,7 @@ shadowJar {
     }
     archiveClassifier.set('')
     manifest {
-        attributes 'Main-Class': 'g03.discord.rbod.RBOD'
+        attributes 'Main-Class': 'g03.discord.rbod.RBODMeta'
     }
 }
 

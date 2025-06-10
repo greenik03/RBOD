@@ -10,6 +10,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
+
 public class ServerDatabase {
     private static final File databaseFile = new File("databases/guilds.json"),
         customPhrasesFile = new File("databases/custom_phrases.json");
@@ -20,7 +22,7 @@ public class ServerDatabase {
             try {
                 if (file.createNewFile()) {
                     if (file.setReadable(true) && file.setWritable(true))
-                        System.out.println("Created new database file: " + file.getName());
+                        System.out.println(systemMessagePrefix + "Created new database file: " + file.getName());
                     else
                         throw new RuntimeException("Cannot set read/write permissions on database file: " + file.getName());
                 }
@@ -33,7 +35,7 @@ public class ServerDatabase {
             throw new RuntimeException("Cannot read/write to database file: " + file.getName());
         }
         else {
-            System.out.println("Database file " + file.getName() + " already exists.");
+            System.out.println(systemMessagePrefix + "Database file " + file.getName() + " already exists.");
         }
     }
 
