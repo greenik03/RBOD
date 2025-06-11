@@ -19,6 +19,9 @@ public class ServerDatabase {
     private static JsonNode settingsNode, customPhrasesNode;
 
     private static void createDatabaseFile(File file) {
+        if (file.getParentFile() != null && !file.getParentFile().exists()) {
+            file.getParentFile().mkdir();
+        }
         if (!file.exists()) {
             try {
                 if (file.createNewFile()) {
@@ -51,6 +54,13 @@ public class ServerDatabase {
         try {
             settingsNode = mapper.readTree(databaseFile);
             customPhrasesNode = mapper.readTree(customPhrasesFile);
+            // Handle empty files by creating ObjectNodes
+            if (settingsNode == null || settingsNode.isMissingNode()) {
+                settingsNode = mapper.createObjectNode();
+            }
+            if (customPhrasesNode == null || customPhrasesNode.isMissingNode()) {
+                customPhrasesNode = mapper.createObjectNode();
+            }
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -85,6 +95,7 @@ public class ServerDatabase {
         ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(new SettingsObj()));
         mapper.writeValue(databaseFile, node);
     }
+
     public static void addServerToCustomPhrases(String serverId) throws IOException {
         if (customPhrasesNode.has(serverId)) {
             throw new IOException("Server already exists in database.");

@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.interactions.IntegrationType;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -13,9 +14,11 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Scanner;
@@ -33,7 +36,17 @@ public class RBODMeta {
 
     // Start of main method
     public static void main(String[] args) {
-        String token = RBODMeta.readTokenFromFile(discordToken);
+        // Prevent the bot from starting until it has all the data it needs
+        String token = readTokenFromFile();
+        if (token == null) {
+            System.out.println(systemMessagePrefix + "No token found in assets/token.txt. Please add a token and restart the bot.");
+            return;
+        }
+        if (readPhrasesFromFile().isEmpty()) {
+            System.out.println(systemMessagePrefix + "assets/phrases.txt has just been created with placeholder. Restart the bot after adding phrases to it.");
+            return;
+        }
+
         JDA jda = JDABuilder.createLight(token, intents)
                 .addEventListeners(new RBOD())
                 .setActivity(Activity.customStatus("It's reacting time!"))
@@ -89,32 +102,31 @@ public class RBODMeta {
             jda.shutdown();
             throw new RuntimeException(e);
         }
-        jda.getGuilds()
-                .forEach(guild -> {
-                    try {
-                        ServerDatabase.addServer(guild.getId());
-                        ServerDatabase.addServerToCustomPhrases(guild.getId());
-                    }
-                    catch (IOException e) {
-                        if (e.getMessage().equals("Server already exists in database.")) {
-                            System.out.println(systemMessagePrefix + "Server already exists in settings database. Skipping " + guild.getId() + "...");
-                        }
-                        else {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                    try {
-                        ServerDatabase.addServerToCustomPhrases(guild.getId());
-                    }
-                    catch (IOException e) {
-                        if (e.getMessage().equals("Server already exists in database.")) {
-                            System.out.println(systemMessagePrefix + "Server already exists in phrases database. Skipping " + guild.getId() + "...");
-                        }
-                        else {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
+        int serverCount = jda.getGuilds().size(),
+            settingsAdded = 0, phrasesAdded = 0;
+        for (Guild guild : jda.getGuilds()) {
+            try {
+                ServerDatabase.addServer(guild.getId());
+                settingsAdded++;
+            }
+            catch (IOException e) {
+                if (!e.getMessage().equals("Server already exists in database.")) {
+                    throw new RuntimeException(e);
+                }
+            }
+            try {
+                ServerDatabase.addServerToCustomPhrases(guild.getId());
+                phrasesAdded++;
+            }
+            catch (IOException e) {
+                if (!e.getMessage().equals("Server already exists in database.")) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        System.out.printf("%sBot is now active in %d servers/guilds.\n", systemMessagePrefix, serverCount);
+        System.out.printf("%sSettings database: %d added, %d unchanged\n", systemMessagePrefix, settingsAdded, serverCount - settingsAdded);
+        System.out.printf("%sCustom phrases database: %d added, %d unchanged\n", systemMessagePrefix, phrasesAdded, serverCount - phrasesAdded);
 
         // Control the bot from a CLI
         Scanner scanner = new Scanner(System.in);
@@ -165,23 +177,45 @@ public class RBODMeta {
             }
         }
         else {
-            throw new RuntimeException("phrases.txt does not exist or cannot be read.");
+            createAssetsFile(phrases);
         }
+        return new ArrayList<>();
     }
 
     // Read token from assets/token.txt
-    public static String readTokenFromFile(File file) {
-        if (file.exists() && file.canRead()) {
+    public static String readTokenFromFile() {
+        if (discordToken.exists() && discordToken.canRead()) {
             try {
-                return Files.readString(file.toPath(), StandardCharsets.UTF_8)
+                return Files.readString(discordToken.toPath(), StandardCharsets.UTF_8)
                         .trim();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
         else {
-            throw new RuntimeException(file.getAbsolutePath() + " does not exist or cannot be read.");
+            createAssetsFile(discordToken);
         }
+        return null;
+    }
+
+    public static void createAssetsFile(File file) {
+        if (file.getParentFile() != null) {
+            file.getParentFile().mkdir();
+        }
+        try {
+            file.createNewFile();
+            file.setReadable(true);
+            file.setWritable(true);
+            if (file.length() == 0) {
+                FileWriter fw = new FileWriter(file);
+                fw.write("Placeholder text");
+                fw.close();
+            }
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println(systemMessagePrefix + "Created new file: " + file.getName());
     }
 
     public static boolean messageContainsExactString(String message, String string) {
