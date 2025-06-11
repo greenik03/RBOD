@@ -184,8 +184,8 @@ public class RBODMeta {
         }
     }
 
-    public static boolean messageContainsExactString(String message, String name) {
-        String exactName = "\\b" + Pattern.quote(name) + "\\b";
+    public static boolean messageContainsExactString(String message, String string) {
+        String exactName = "\\b" + Pattern.quote(string) + "\\b";
         Pattern pattern = Pattern.compile(exactName, Pattern.CASE_INSENSITIVE);
         return pattern.matcher(message).find();
     }

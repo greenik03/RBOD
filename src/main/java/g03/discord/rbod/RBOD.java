@@ -22,6 +22,9 @@ import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
 public class RBOD extends ListenerAdapter {
     // Initialize variables
     static Random rng = new Random();
+    //TODO: Implement HashMap<String, List> to store global and custom phrases:
+    // "global": global phrases list
+    // [guildID]: global + custom phrases (if they exist, otherwise use "global")
 
     @Override
     public void onReady(@NotNull ReadyEvent event) {

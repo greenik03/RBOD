@@ -16,6 +16,7 @@ public class ServerDatabase {
     private static final File databaseFile = new File("databases/guilds.json"),
         customPhrasesFile = new File("databases/custom_phrases.json");
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static JsonNode settingsNode, customPhrasesNode;
 
     private static void createDatabaseFile(File file) {
         if (!file.exists()) {
@@ -47,78 +48,76 @@ public class ServerDatabase {
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
                 .configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
-    }
-
-    public static List<ServerClass> getServers() {
         try {
-            if (!databaseFile.exists() || databaseFile.length() == 0) {
-                return new ArrayList<>();
-            }
-            JsonNode node = mapper.readTree(databaseFile);
-            List<ServerClass> servers = new ArrayList<>();
-            node.fields().forEachRemaining(entry -> {
-                try {
-                    SettingsObj settings = mapper.treeToValue(entry.getValue(), SettingsObj.class);
-                    ServerClass server = new ServerClass(entry.getKey(), settings);
-                    servers.add(server);
-                }
-                catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            return servers;
-        } catch (IOException e) {
+            settingsNode = mapper.readTree(databaseFile);
+            customPhrasesNode = mapper.readTree(customPhrasesFile);
+        }
+        catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    public static List<ServerClass> getServers() {
+
+        if (!databaseFile.exists() || databaseFile.length() == 0) {
+            return new ArrayList<>();
+        }
+        List<ServerClass> servers = new ArrayList<>();
+        settingsNode.fields().forEachRemaining(entry -> {
+            try {
+                SettingsObj settings = mapper.treeToValue(entry.getValue(), SettingsObj.class);
+                ServerClass server = new ServerClass(entry.getKey(), settings);
+                servers.add(server);
+            }
+            catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return servers;
+
+    }
+
     // IOException thrown from if statement is handled in main code
     public static void addServer(String serverId) throws IOException {
-        JsonNode node = (databaseFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(databaseFile);
-        if (node.has(serverId)) {
+        if (settingsNode.has(serverId)) {
             throw new IOException("Server already exists in database.");
         }
-        ((ObjectNode) node).set(serverId, mapper.valueToTree(new SettingsObj()));
+        ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(new SettingsObj()));
         mapper.writeValue(databaseFile, node);
     }
     public static void addServerToCustomPhrases(String serverId) throws IOException {
-        JsonNode node = (customPhrasesFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(customPhrasesFile);
-        if (node.has(serverId)) {
+        if (customPhrasesNode.has(serverId)) {
             throw new IOException("Server already exists in database.");
         }
-        ((ObjectNode) node).set(serverId, mapper.valueToTree(new ArrayList<String>()));
+        ObjectNode node = ((ObjectNode) customPhrasesNode).set(serverId, mapper.valueToTree(new ArrayList<String>()));
         mapper.writeValue(customPhrasesFile, node);
     }
 
     // if the server was never in the database (somehow), then do nothing
     public static void removeServer(String serverId) throws IOException {
-        JsonNode node = mapper.readTree(databaseFile);
-        if (!node.has(serverId)) {
+        if (!settingsNode.has(serverId)) {
             return;
         }
-        ((ObjectNode) node).remove(serverId);
-        mapper.writeValue(databaseFile, node);
+        ((ObjectNode) settingsNode).remove(serverId);
+        mapper.writeValue(databaseFile, settingsNode);
     }
     public static void removeServerFromCustomPhrases(String serverId) throws IOException {
-        JsonNode node = mapper.readTree(customPhrasesFile);
-        if (!node.has(serverId)) {
+        if (!customPhrasesNode.has(serverId)) {
             return;
         }
-        ((ObjectNode) node).remove(serverId);
-        mapper.writeValue(customPhrasesFile, node);
+        ((ObjectNode) customPhrasesNode).remove(serverId);
+        mapper.writeValue(customPhrasesFile, customPhrasesNode);
     }
 
     public static SettingsObj getSettings(String serverId) throws IOException {
         if (!databaseFile.exists() || databaseFile.length() == 0) {
             return null;
         }
-        JsonNode node = mapper.readTree(databaseFile);
-        return !node.has(serverId)? null : mapper.treeToValue(node.get(serverId), SettingsObj.class);
+        return !settingsNode.has(serverId)? null : mapper.treeToValue(settingsNode.get(serverId), SettingsObj.class);
     }
 
     public static void setSettings(String serverId, SettingsObj settings) throws IOException {
-        JsonNode node = (databaseFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(databaseFile);
-        ((ObjectNode) node).set(serverId, mapper.valueToTree(settings));
+        ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(settings));
         mapper.writeValue(databaseFile, node);
     }
 
@@ -126,13 +125,11 @@ public class ServerDatabase {
         if (!customPhrasesFile.exists() || customPhrasesFile.length() == 0) {
             return null;
         }
-        JsonNode node = mapper.readTree(customPhrasesFile);
-        return !node.has(serverId)? null : mapper.treeToValue(node.get(serverId), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+        return !customPhrasesNode.has(serverId)? null : mapper.treeToValue(customPhrasesNode.get(serverId), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
     }
 
     public static void setCustomPhrases(String serverId, List<String> phrases) throws IOException {
-        JsonNode node = (customPhrasesFile.length() == 0)? mapper.createObjectNode() : mapper.readTree(customPhrasesFile);
-        ((ObjectNode) node).set(serverId, mapper.valueToTree(phrases));
+        ObjectNode node = ((ObjectNode) customPhrasesNode).set(serverId, mapper.valueToTree(phrases));
         mapper.writeValue(customPhrasesFile, node);
     }
 }

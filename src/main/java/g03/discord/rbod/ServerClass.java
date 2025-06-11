@@ -1,9 +1,7 @@
 package g03.discord.rbod;
 
-import java.io.Serializable;
-
-// Serializable probably does nothing here since this class is only used to show server info in the CLI
-public class ServerClass implements Serializable {
+// Used to be Serializable, only used to show server info in the CLI (for now)
+public class ServerClass {
     String serverId;
     SettingsObj settings;
 
