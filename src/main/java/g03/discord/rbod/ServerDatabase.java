@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
 
@@ -17,10 +19,12 @@ public class ServerDatabase {
         customPhrasesFile = new File("databases/custom_phrases.json");
     private static final ObjectMapper mapper = new ObjectMapper();
     private static JsonNode settingsNode, customPhrasesNode;
+    private static final ReadWriteLock databaseLock = new ReentrantReadWriteLock(),
+        customPhrasesLock = new ReentrantReadWriteLock();
 
     private static void createDatabaseFile(File file) {
         if (file.getParentFile() != null && !file.getParentFile().exists()) {
-            file.getParentFile().mkdir();
+            file.getParentFile().mkdirs();
         }
         if (!file.exists()) {
             try {
@@ -45,102 +49,162 @@ public class ServerDatabase {
 
     // Create database file if none exists, then configure ObjectMapper
     public static void init() {
-        createDatabaseFile(databaseFile);
-        createDatabaseFile(customPhrasesFile);
-        mapper.configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
-                .configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
+        databaseLock.writeLock().lock();
+        customPhrasesLock.writeLock().lock();
         try {
-            settingsNode = mapper.readTree(databaseFile);
-            customPhrasesNode = mapper.readTree(customPhrasesFile);
-            // Handle empty files by creating ObjectNodes
-            if (settingsNode == null || settingsNode.isMissingNode()) {
-                settingsNode = mapper.createObjectNode();
-            }
-            if (customPhrasesNode == null || customPhrasesNode.isMissingNode()) {
-                customPhrasesNode = mapper.createObjectNode();
+            createDatabaseFile(databaseFile);
+            createDatabaseFile(customPhrasesFile);
+            mapper.configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                    .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
+                    .configure(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS, false);
+            try {
+                settingsNode = mapper.readTree(databaseFile);
+                customPhrasesNode = mapper.readTree(customPhrasesFile);
+                // Handle empty files by creating ObjectNodes
+                if (settingsNode == null || settingsNode.isMissingNode()) {
+                    settingsNode = mapper.createObjectNode();
+                }
+                if (customPhrasesNode == null || customPhrasesNode.isMissingNode()) {
+                    customPhrasesNode = mapper.createObjectNode();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
-        catch (IOException e) {
-            throw new RuntimeException(e);
+        finally {
+            databaseLock.writeLock().unlock();
+            customPhrasesLock.writeLock().unlock();
         }
     }
 
     public static List<ServerClass> getServers() {
-
-        if (!databaseFile.exists() || databaseFile.length() == 0) {
-            return new ArrayList<>();
+        databaseLock.readLock().lock();
+        try {
+            if (!databaseFile.exists() || databaseFile.length() == 0) {
+                return new ArrayList<>();
+            }
+            List<ServerClass> servers = new ArrayList<>();
+            settingsNode.fields().forEachRemaining(entry -> {
+                try {
+                    SettingsObj settings = mapper.treeToValue(entry.getValue(), SettingsObj.class);
+                    ServerClass server = new ServerClass(entry.getKey(), settings);
+                    servers.add(server);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            return servers;
         }
-        List<ServerClass> servers = new ArrayList<>();
-        settingsNode.fields().forEachRemaining(entry -> {
-            try {
-                SettingsObj settings = mapper.treeToValue(entry.getValue(), SettingsObj.class);
-                ServerClass server = new ServerClass(entry.getKey(), settings);
-                servers.add(server);
-            }
-            catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return servers;
-
+        finally {
+            databaseLock.readLock().unlock();
+        }
     }
 
     // IOException thrown from if statement is handled in main code
     public static void addServer(String serverId) throws IOException {
-        if (settingsNode.has(serverId)) {
-            throw new IOException("Server already exists in database.");
+        databaseLock.writeLock().lock();
+        try {
+            if (settingsNode.has(serverId)) {
+                throw new IOException("Server already exists in database.");
+            }
+            SettingsObj settings = new SettingsObj();
+            ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(settings));
+            mapper.writeValue(databaseFile, node);
         }
-        ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(new SettingsObj()));
-        mapper.writeValue(databaseFile, node);
+        finally {
+            databaseLock.writeLock().unlock();
+        }
     }
 
     public static void addServerToCustomPhrases(String serverId) throws IOException {
-        if (customPhrasesNode.has(serverId)) {
-            throw new IOException("Server already exists in database.");
+        customPhrasesLock.writeLock().lock();
+        try {
+            if (customPhrasesNode.has(serverId)) {
+                throw new IOException("Server already exists in database.");
+            }
+            List<String> newPhrases = new ArrayList<>();
+            ObjectNode node = ((ObjectNode) customPhrasesNode).set(serverId, mapper.valueToTree(newPhrases));
+            mapper.writeValue(customPhrasesFile, node);
         }
-        ObjectNode node = ((ObjectNode) customPhrasesNode).set(serverId, mapper.valueToTree(new ArrayList<String>()));
-        mapper.writeValue(customPhrasesFile, node);
+        finally {
+            customPhrasesLock.writeLock().unlock();
+        }
     }
 
     // if the server was never in the database (somehow), then do nothing
     public static void removeServer(String serverId) throws IOException {
-        if (!settingsNode.has(serverId)) {
-            return;
+        databaseLock.writeLock().lock();
+        try {
+            if (!settingsNode.has(serverId)) {
+                return;
+            }
+            ((ObjectNode) settingsNode).remove(serverId);
+            mapper.writeValue(databaseFile, settingsNode);
         }
-        ((ObjectNode) settingsNode).remove(serverId);
-        mapper.writeValue(databaseFile, settingsNode);
+        finally {
+            databaseLock.writeLock().unlock();
+        }
     }
     public static void removeServerFromCustomPhrases(String serverId) throws IOException {
-        if (!customPhrasesNode.has(serverId)) {
-            return;
+        customPhrasesLock.writeLock().lock();
+        try {
+            if (!customPhrasesNode.has(serverId)) {
+                return;
+            }
+            ((ObjectNode) customPhrasesNode).remove(serverId);
+            mapper.writeValue(customPhrasesFile, customPhrasesNode);
         }
-        ((ObjectNode) customPhrasesNode).remove(serverId);
-        mapper.writeValue(customPhrasesFile, customPhrasesNode);
+        finally {
+            customPhrasesLock.writeLock().unlock();
+        }
     }
 
     public static SettingsObj getSettings(String serverId) throws IOException {
-        if (!databaseFile.exists() || databaseFile.length() == 0) {
-            return null;
+        databaseLock.readLock().lock();
+        try {
+            if (!databaseFile.exists() || databaseFile.length() == 0) {
+                return null;
+            }
+            return !settingsNode.has(serverId) ? null : mapper.treeToValue(settingsNode.get(serverId), SettingsObj.class);
         }
-        return !settingsNode.has(serverId)? null : mapper.treeToValue(settingsNode.get(serverId), SettingsObj.class);
+        finally {
+            databaseLock.readLock().unlock();
+        }
     }
 
     public static void setSettings(String serverId, SettingsObj settings) throws IOException {
-        ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(settings));
-        mapper.writeValue(databaseFile, node);
+        databaseLock.writeLock().lock();
+        try {
+            ObjectNode node = ((ObjectNode) settingsNode).set(serverId, mapper.valueToTree(settings));
+            mapper.writeValue(databaseFile, node);
+        }
+        finally {
+            databaseLock.writeLock().unlock();
+        }
     }
 
     public static List<String> getCustomPhrases(String serverId) throws IOException {
-        if (!customPhrasesFile.exists() || customPhrasesFile.length() == 0) {
-            return null;
+        customPhrasesLock.readLock().lock();
+        try {
+            if (!customPhrasesFile.exists() || customPhrasesFile.length() == 0) {
+                return null;
+            }
+            return !customPhrasesNode.has(serverId) ? null : mapper.treeToValue(customPhrasesNode.get(serverId), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
         }
-        return !customPhrasesNode.has(serverId)? null : mapper.treeToValue(customPhrasesNode.get(serverId), mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+        finally {
+            customPhrasesLock.readLock().unlock();
+        }
     }
 
     public static void setCustomPhrases(String serverId, List<String> phrases) throws IOException {
-        ObjectNode node = ((ObjectNode) customPhrasesNode).set(serverId, mapper.valueToTree(phrases));
-        mapper.writeValue(customPhrasesFile, node);
+        customPhrasesLock.writeLock().lock();
+        try {
+            ObjectNode node = ((ObjectNode) customPhrasesNode).set(serverId, mapper.valueToTree(phrases));
+            mapper.writeValue(customPhrasesFile, node);
+        }
+        finally {
+            customPhrasesLock.writeLock().unlock();
+        }
     }
 }
