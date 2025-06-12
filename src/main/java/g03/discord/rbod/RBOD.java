@@ -22,12 +22,18 @@ import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
 public class RBOD extends ListenerAdapter {
     // Initialize variables
     static Random rng = new Random();
-    //TODO: Implement HashMap<String, List> to store global and custom phrases:
-    // "global": global phrases list
-    // [guildID]: global + custom phrases (if they exist, otherwise use "global")
+    HashMap<String, List<String>> phrasesCache = new HashMap<>();
 
     @Override
     public void onReady(@NotNull ReadyEvent event) {
+        phrasesCache.putIfAbsent("global", RBODMeta.readPhrasesFromFile());
+        event.getJDA().getGuilds().forEach(guild -> {
+            try {
+                phrasesCache.putIfAbsent(guild.getId(), ServerDatabase.getCustomPhrases(guild.getId()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
         System.out.println(systemMessagePrefix + "Bot is online! Type 'help' for a list of commands.");
     }
 
