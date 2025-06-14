@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
@@ -22,18 +23,74 @@ import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
 public class RBOD extends ListenerAdapter {
     // Initialize variables
     static Random rng = new Random();
-    HashMap<String, List<String>> phrasesCache = new HashMap<>();
+    static HashMap<String, List<String>> phrasesCache = new HashMap<>();
+    static HashMap<String, SettingsObj> settingsCache = new HashMap<>();
+
+    public static void cacheInit(List<Guild> guilds) {
+        // regular boolean data type doesn't work inside the lambda expression of forEach
+        AtomicBoolean exceptionThrown = new AtomicBoolean(false);
+        System.out.println(systemMessagePrefix + "Building caches...");
+        phrasesCache.putIfAbsent("global", RBODMeta.readPhrasesFromFile());
+        guilds.forEach(guild -> {
+            try {
+                phrasesCache.putIfAbsent(guild.getId(), ServerDatabase.getCustomPhrases(guild.getId()));
+                SettingsObj settings = ServerDatabase.getSettings(guild.getId());
+                if (settings != null) {
+                    settingsCache.putIfAbsent(guild.getId(), settings);
+                }
+            } catch (IOException e) {
+                System.err.println(systemMessagePrefix + "Error while reading databases for guild " + guild.getName() + " (" + guild.getId() + ")");
+                System.err.println(e.getMessage());
+                exceptionThrown.set(true);
+            }
+        });
+        System.out.println(systemMessagePrefix + (!exceptionThrown.get()? "Caches: done!" : "Caches: error!"));
+    }
+
+    public SettingsObj getSettingsFromCache(String ID) {
+        SettingsObj settings = settingsCache.get(ID);
+        if (settings == null) {
+            try {
+                settings = ServerDatabase.getSettings(ID);
+                if (settings != null) {
+                    settingsCache.put(ID, settings);
+                }
+                else {
+                    System.out.println(systemMessagePrefix + "Settings not found. Creating new settings for server with ID " + ID);
+                    ServerDatabase.addServer(ID);
+                    settings = new SettingsObj();
+                    settingsCache.put(ID, settings);
+                }
+            }
+            catch (IOException e) {
+                System.err.println(systemMessagePrefix + "Error while reading databases for guild with ID " + ID);
+                System.err.println(e.getMessage());
+                return null;
+            }
+        }
+        return settings;
+    }
+
+    public String getPhraseFromCache(String ID) {
+        List<String> phrases = new ArrayList<>(phrasesCache.get("global"));
+        if (ID != null && phrasesCache.get(ID) != null && !phrasesCache.get(ID).isEmpty()) {
+            phrases.addAll(phrasesCache.get(ID));
+        }
+        int phraseIndex = rng.nextInt(0, phrases.size());
+        String reply = phrases.get(phraseIndex).trim();
+        // Check for blank phrases and escape sequences
+        while (reply.isBlank()) {
+            phraseIndex = rng.nextInt(0, phrases.size());
+            reply = phrases.get(phraseIndex).trim();
+        }
+        if (reply.contains("\\n")) {
+            reply = reply.replace("\\n", "\n");
+        }
+        return reply;
+    }
 
     @Override
     public void onReady(@NotNull ReadyEvent event) {
-        phrasesCache.putIfAbsent("global", RBODMeta.readPhrasesFromFile());
-        event.getJDA().getGuilds().forEach(guild -> {
-            try {
-                phrasesCache.putIfAbsent(guild.getId(), ServerDatabase.getCustomPhrases(guild.getId()));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
         System.out.println(systemMessagePrefix + "Bot is online! Type 'help' for a list of commands.");
     }
 
@@ -48,6 +105,7 @@ public class RBOD extends ListenerAdapter {
         try {
             settings = ServerDatabase.getSettings(ID);
         } catch (IOException e) {
+            //TODO: Handle this differently, as method in 'try' can return null
             settings = null;
         }
         if (settings == null) {
@@ -65,6 +123,7 @@ public class RBOD extends ListenerAdapter {
                 .split("\\s+");
         // var command = [command, subcommand, ...]
         switch (command[0]) {
+            //TODO: Add cache methods
             case "toggle":
                 try {
                     if (command[1].equalsIgnoreCase("on-name-react")) {
@@ -86,6 +145,7 @@ public class RBOD extends ListenerAdapter {
                 }
                 break;
 
+                //TODO: Add cache methods
             case "names":
                 try {
                     if (command[1].equalsIgnoreCase("add")) {
@@ -135,6 +195,7 @@ public class RBOD extends ListenerAdapter {
                 }
             break;
 
+                //TODO: Add cache methods
             case "phrases":
                 try {
                     if (command[1].equalsIgnoreCase("add")) {
@@ -188,6 +249,7 @@ public class RBOD extends ListenerAdapter {
                 }
             break;
 
+                //TODO: Add cache methods
             case "reset":
                 String option = event.getOption("data") == null? "" : Objects.requireNonNull(event.getOption("data")).getAsString();
                 if (option.isBlank() || option.equalsIgnoreCase("all")) {
@@ -239,7 +301,7 @@ public class RBOD extends ListenerAdapter {
                     
                     /phrases add [phrase] - Adds [phrase] to the list of custom phrases for this server. (case-sensitive)
                     \t- Markdown and emojis work
-                    \t- Add '\\n' anywhere to break line into new one
+                    \t- Add '\\n' anywhere to add a line break
                     \t- Add 'edit:' anywhere to make message appear edited
                     
                     /phrases remove [index] - Removes the custom phrase at the specified index from the list of custom phrases for this server.
@@ -280,7 +342,7 @@ public class RBOD extends ListenerAdapter {
         SelfUser self = event.getJDA().getSelfUser();
         // Do not reply to self
         if (event.getAuthor().equals(self)) {
-            if (RBODMeta.messageContainsExactString(event.getMessage().getContentRaw(), "edit:")) {
+            if (RBODMeta.messageContainsExactString(event.getMessage().getContentRaw(), "edit:")/*&& message is of type Context Command*/) {
                // this works for some reason
                 String message = event.getMessage().getContentRaw();
                 event.getMessage().editMessage(message).queue();
@@ -288,35 +350,10 @@ public class RBOD extends ListenerAdapter {
             return;
         }
 
-        String ID = null;
-        List<String> phrasesList = RBODMeta.readPhrasesFromFile();
-        List<String> customPhrasesList;
-        if (event.isFromGuild()) {
-            ID = event.getGuild().getId();
-            try {
-                customPhrasesList = ServerDatabase.getCustomPhrases(ID);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            if (customPhrasesList != null && !customPhrasesList.isEmpty()) {
-                phrasesList.addAll(customPhrasesList);
-            }
-        }
-
-        int phraseIndex = rng.nextInt(0, phrasesList.size());
-        String reply = phrasesList.get(phraseIndex).trim();
-
-        // Check for blank phrases or escape sequences
-        while (reply.isBlank()) {
-            phraseIndex = rng.nextInt(0, phrasesList.size());
-            reply = phrasesList.get(phraseIndex).trim();
-        }
-        if (reply.contains("\\n")) {
-            reply = reply.replace("\\n", "\n");
-        }
-
         // Respond to direct messages
         if (!event.isFromGuild()) {
+            // null is for global phrases only
+            String reply = getPhraseFromCache(null);
             event.getChannel()
                     .sendMessage(reply)
                     .queue();
@@ -325,37 +362,24 @@ public class RBOD extends ListenerAdapter {
 
         String message = event.getMessage().getContentRaw();
         String mention = String.format("<@%s>", self.getApplicationId());
+        String ID = event.getGuild().getId();
 
         // Respond to @ mentions
         if (message.contains(mention)) {
+            String reply = getPhraseFromCache(ID);
             event.getMessage()
                     .reply(reply)
                     .queue();
             return;
         }
 
-        SettingsObj settings;
-        try {
-            settings = ServerDatabase.getSettings(ID);
-        } catch (IOException e) {
-            settings = null;
-        }
-        if (settings == null) {
-            event.getMessage()
-                    .reply("`Settings not found. Creating new settings for server. Use /toggle and try interacting with me again.`")
-                    .queue();
-            try {
-                ServerDatabase.addServer(ID);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return;
-        }
+        SettingsObj settings = getSettingsFromCache(ID);
 
         // Respond to name call
-        if (settings.isReactOnName()) {
+        if (settings != null && settings.isReactOnName()) {
             for (String name : settings.getNames()) {
                 if (RBODMeta.messageContainsExactString(message, name)) {
+                    String reply = getPhraseFromCache(ID);
                     event.getMessage()
                             .reply(reply)
                             .queue();
@@ -364,17 +388,25 @@ public class RBOD extends ListenerAdapter {
             }
         }
         // Respond to reply
-        if (settings.isReactOnReply()) {
+        if (settings != null && settings.isReactOnReply()) {
             Message referencedMessage = event.getMessage().getReferencedMessage();
             if (referencedMessage == null) {
                 return;
             }
             if (event.getMessage().getType().equals(MessageType.INLINE_REPLY) && referencedMessage.getAuthor().equals(self)) {
+                String reply = getPhraseFromCache(ID);
                 event.getMessage()
                         .reply(reply)
                         .queue();
-                // return;
+                 return;
             }
+        }
+
+        if (settings == null) {
+            event.getChannel()
+                    .sendMessage("`Settings not found. Creating new settings for server. Tinker with the settings and try again.`")
+                    .queue();
+//            return;
         }
     }
 
@@ -406,6 +438,8 @@ public class RBOD extends ListenerAdapter {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        settingsCache.put(event.getGuild().getId(), new SettingsObj());
+        System.out.println(systemMessagePrefix + "Joined guild " + event.getGuild().getName() + " (" + event.getGuild().getId() + ").");
     }
 
     @Override
@@ -416,5 +450,8 @@ public class RBOD extends ListenerAdapter {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        phrasesCache.remove(event.getGuild().getId());
+        settingsCache.remove(event.getGuild().getId());
+        System.out.println(systemMessagePrefix + "Left guild " + event.getGuild().getName() + " (" + event.getGuild().getId() + ").");
     }
 }
