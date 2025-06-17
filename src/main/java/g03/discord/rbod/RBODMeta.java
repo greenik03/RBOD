@@ -43,7 +43,7 @@ public class RBODMeta {
             return;
         }
         if (readPhrasesFromFile().isEmpty()) {
-            System.out.println(systemMessagePrefix + "assets/phrases.txt has just been created with placeholder. Restart the bot after adding phrases to it.");
+            System.out.println(systemMessagePrefix + "assets/phrases.txt has just been created with placeholder text. Restart the bot after adding phrases to it.");
             return;
         }
 
@@ -102,9 +102,9 @@ public class RBODMeta {
             jda.shutdown();
             throw new RuntimeException(e);
         }
-        int serverCount = jda.getGuilds().size(),
-            settingsAdded = 0, phrasesAdded = 0;
-        for (Guild guild : jda.getGuilds()) {
+        int settingsAdded = 0, phrasesAdded = 0;
+        List<Guild> guilds = jda.getGuilds();
+        for (Guild guild : guilds) {
             try {
                 ServerDatabase.addServer(guild.getId());
                 settingsAdded++;
@@ -124,27 +124,48 @@ public class RBODMeta {
                 }
             }
         }
-        System.out.printf("%sBot is now active in %d servers/guilds.\n", systemMessagePrefix, serverCount);
-        System.out.printf("%sSettings database: %d added, %d unchanged\n", systemMessagePrefix, settingsAdded, serverCount - settingsAdded);
-        System.out.printf("%sCustom phrases database: %d added, %d unchanged\n", systemMessagePrefix, phrasesAdded, serverCount - phrasesAdded);
+        System.out.printf("%sBot is now active in %d servers/guilds.\n", systemMessagePrefix, guilds.size());
+        System.out.printf("%sSettings database: %d added, %d unchanged\n", systemMessagePrefix, settingsAdded, guilds.size() - settingsAdded);
+        System.out.printf("%sCustom phrases database: %d added, %d unchanged\n", systemMessagePrefix, phrasesAdded, guilds.size() - phrasesAdded);
+
+        RBOD.cacheInit(guilds);
 
         // Control the bot from a CLI
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            String[] input = scanner.nextLine().split("\\s+");
+            String[] input = scanner.nextLine()
+                    .toLowerCase()
+                    .trim()
+                    .split("\\s+");
             String baseCommand = input[0];
-            if (baseCommand.equalsIgnoreCase("stop") || baseCommand.equalsIgnoreCase("exit") || baseCommand.equalsIgnoreCase("quit")) {
+            if (baseCommand.equals("stop") || baseCommand.equals("exit") || baseCommand.equals("quit")) {
                 break;
             }
             switch (baseCommand) {
+                case "cache":
+                    if (input.length < 2) {
+                        System.out.println(systemMessagePrefix + "Available subcommands:");
+                        System.out.println("\treset - Resets the cache.");
+                        break;
+                    }
+                    if (input[1].equals("reset")) {
+                        RBOD.cacheInit(jda.getGuildCache().asList());
+                        break;
+                    }
+                    break;
                 case "help":
                     printCLIUsage();
                     break;
                 case "listservers":
+                    System.out.println(systemMessagePrefix + "Servers in database:");
                     List<ServerClass> servers = ServerDatabase.getServers();
                     for (ServerClass server : servers) {
                         System.out.println(server.toString());
                     }
+                    System.out.println(systemMessagePrefix + "There are " + servers.size() + " servers in the database.");
+                    System.out.println(systemMessagePrefix + "Servers in cache:");
+                    jda.getGuildCache().forEach(System.out::println);
+                    System.out.println(systemMessagePrefix + "There are " + jda.getGuildCache().size() + " servers in the cache.");
                     break;
                 case "ping":
                     System.out.println(systemMessagePrefix + "Gateway: " + jda.getGatewayPing() + "ms");
@@ -162,7 +183,9 @@ public class RBODMeta {
 
     static void printCLIUsage() {
         System.out.println(systemMessagePrefix + "Here are the commands you can use:");
-        System.out.println("\tlistservers - Lists all the servers in the database.");
+        System.out.println("\tcache - Interact with the cache with the following subcommands:");
+        System.out.println("\t\treset - Resets the cache.");
+        System.out.println("\tlistservers - Lists all the servers in the database and cache.");
         System.out.println("\tping - Prints the bot's ping to Discord.");
         System.out.println("\tstop, exit, quit - Stops the bot.");
     }
@@ -200,22 +223,23 @@ public class RBODMeta {
 
     public static void createAssetsFile(File file) {
         if (file.getParentFile() != null) {
-            file.getParentFile().mkdir();
+            file.getParentFile().mkdirs();
         }
         try {
-            file.createNewFile();
-            file.setReadable(true);
-            file.setWritable(true);
-            if (file.length() == 0) {
+            boolean success =
+                file.createNewFile() &&
+                file.setReadable(true) &&
+                file.setWritable(true);
+            if (success || file.length() == 0) {
                 FileWriter fw = new FileWriter(file);
-                fw.write("Placeholder text");
+                fw.append("Placeholder text");
                 fw.close();
             }
         }
         catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println(systemMessagePrefix + "Created new file: " + file.getName());
+        System.out.println(systemMessagePrefix + "Created new file: " + file.getPath());
     }
 
     public static boolean messageContainsExactString(String message, String string) {

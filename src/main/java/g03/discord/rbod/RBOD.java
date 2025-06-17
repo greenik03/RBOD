@@ -30,13 +30,13 @@ public class RBOD extends ListenerAdapter {
         // regular boolean data type doesn't work inside the lambda expression of forEach
         AtomicBoolean exceptionThrown = new AtomicBoolean(false);
         System.out.println(systemMessagePrefix + "Building caches...");
-        phrasesCache.putIfAbsent("global", RBODMeta.readPhrasesFromFile());
+        phrasesCache.put("global", RBODMeta.readPhrasesFromFile());
         guilds.forEach(guild -> {
             try {
-                phrasesCache.putIfAbsent(guild.getId(), ServerDatabase.getCustomPhrases(guild.getId()));
+                phrasesCache.put(guild.getId(), ServerDatabase.getCustomPhrases(guild.getId()));
                 SettingsObj settings = ServerDatabase.getSettings(guild.getId());
                 if (settings != null) {
-                    settingsCache.putIfAbsent(guild.getId(), settings);
+                    settingsCache.put(guild.getId(), settings);
                 }
             } catch (IOException e) {
                 System.err.println(systemMessagePrefix + "Error while reading databases for guild " + guild.getName() + " (" + guild.getId() + ")");
@@ -74,7 +74,21 @@ public class RBOD extends ListenerAdapter {
     public String getPhraseFromCache(String ID) {
         List<String> phrases = new ArrayList<>(phrasesCache.get("global"));
         if (ID != null && phrasesCache.get(ID) != null && !phrasesCache.get(ID).isEmpty()) {
-            phrases.addAll(phrasesCache.get(ID));
+            List<String> customPhrases = new ArrayList<>(phrasesCache.get(ID));
+            if (customPhrases.isEmpty()) {
+                try {
+                    customPhrases = ServerDatabase.getCustomPhrases(ID);
+                }
+                catch (IOException e) {
+                    System.err.println(systemMessagePrefix + "Error while reading phrases database for guild with ID " + ID);
+                    System.err.println(e.getMessage());
+                    return null;
+                }
+                phrasesCache.put(ID, customPhrases);
+            }
+            if (customPhrases != null && !customPhrases.isEmpty()) {
+                phrases.addAll(customPhrases);
+            }
         }
         int phraseIndex = rng.nextInt(0, phrases.size());
         String reply = phrases.get(phraseIndex).trim();
@@ -342,7 +356,7 @@ public class RBOD extends ListenerAdapter {
         SelfUser self = event.getJDA().getSelfUser();
         // Do not reply to self
         if (event.getAuthor().equals(self)) {
-            if (RBODMeta.messageContainsExactString(event.getMessage().getContentRaw(), "edit:")/*&& message is of type Context Command*/) {
+            if (RBODMeta.messageContainsExactString(event.getMessage().getContentRaw(), "edit:")/*TODO: && message is not of type Context Command*/) {
                // this works for some reason
                 String message = event.getMessage().getContentRaw();
                 event.getMessage().editMessage(message).queue();
@@ -357,6 +371,10 @@ public class RBOD extends ListenerAdapter {
             event.getChannel()
                     .sendMessage(reply)
                     .queue();
+            return;
+        }
+
+        if (!event.getChannel().asGuildMessageChannel().canTalk()) {
             return;
         }
 
@@ -404,8 +422,14 @@ public class RBOD extends ListenerAdapter {
 
         if (settings == null) {
             event.getChannel()
-                    .sendMessage("`Settings not found. Creating new settings for server. Tinker with the settings and try again.`")
+                    .sendMessage("`Settings not found or corrupted. Creating new settings for server. New settings may need to be adjusted.`")
                     .queue();
+            try {
+                ServerDatabase.addServer(ID);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            settingsCache.put(ID, new SettingsObj());
 //            return;
         }
     }
@@ -419,9 +443,10 @@ public class RBOD extends ListenerAdapter {
     @Override
     public void onGuildJoin(GuildJoinEvent event) {
         String welcomeMessage = "Hi! I'm ReactBot! @ me to react to your message! Use `/help` to get started.";
-        TextChannel channel = event.getGuild().getSystemChannel();
+        Guild guild = event.getGuild();
+        TextChannel channel = guild.getSystemChannel();
         if (channel == null || !channel.canTalk()) {
-            for (TextChannel textChannel : event.getGuild().getTextChannels()) {
+            for (TextChannel textChannel : guild.getTextChannels()) {
                 if (textChannel.canTalk()) {
                     channel = textChannel;
                     break;
@@ -433,25 +458,26 @@ public class RBOD extends ListenerAdapter {
                     .queue();
         }
         try {
-            ServerDatabase.addServer(event.getGuild().getId());
-            ServerDatabase.addServerToCustomPhrases(event.getGuild().getId());
+            ServerDatabase.addServer(guild.getId());
+            ServerDatabase.addServerToCustomPhrases(guild.getId());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        settingsCache.put(event.getGuild().getId(), new SettingsObj());
-        System.out.println(systemMessagePrefix + "Joined guild " + event.getGuild().getName() + " (" + event.getGuild().getId() + ").");
+        settingsCache.put(guild.getId(), new SettingsObj());
+        System.out.println(systemMessagePrefix + "Joined guild " + guild.getName() + " (" + guild.getId() + ").");
     }
 
     @Override
     public void onGuildLeave(@NotNull GuildLeaveEvent event) {
+        Guild guild = event.getGuild();
         try {
-            ServerDatabase.removeServer(event.getGuild().getId());
-            ServerDatabase.removeServerFromCustomPhrases(event.getGuild().getId());
+            ServerDatabase.removeServer(guild.getId());
+            ServerDatabase.removeServerFromCustomPhrases(guild.getId());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        phrasesCache.remove(event.getGuild().getId());
-        settingsCache.remove(event.getGuild().getId());
-        System.out.println(systemMessagePrefix + "Left guild " + event.getGuild().getName() + " (" + event.getGuild().getId() + ").");
+        phrasesCache.remove(guild.getId());
+        settingsCache.remove(guild.getId());
+        System.out.println(systemMessagePrefix + "Left guild " + guild.getName() + " (" + guild.getId() + ").");
     }
 }
