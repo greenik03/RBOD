@@ -115,21 +115,24 @@ public class RBOD extends ListenerAdapter {
             return;
         }
         String ID = Objects.requireNonNull(event.getGuild()).getId();
-        SettingsObj settings;
-        try {
-            settings = ServerDatabase.getSettings(ID);
-        } catch (IOException e) {
-            //TODO: Handle this differently, as method in 'try' can return null
-            settings = null;
-        }
+        SettingsObj settings = getSettingsFromCache(ID);
         if (settings == null) {
-            event.reply("`Settings not found. Creating new settings for server. Run the command again.`").queue();
             try {
-                ServerDatabase.addServer(ID);
+                settings = ServerDatabase.getSettings(ID);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            return;
+            if (settings == null) {
+                event.reply("`Settings not found. Creating new settings for server. Run the command again.`").queue();
+                try {
+                    ServerDatabase.addServer(ID);
+                    settingsCache.put(ID, new SettingsObj());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                return;
+            }
+            settingsCache.put(ID, settings);
         }
         String[] command = event.getFullCommandName()
                 .toLowerCase()
@@ -137,18 +140,19 @@ public class RBOD extends ListenerAdapter {
                 .split("\\s+");
         // var command = [command, subcommand, ...]
         switch (command[0]) {
-            //TODO: Add cache methods
             case "toggle":
                 try {
                     if (command[1].equalsIgnoreCase("on-name-react")) {
                         boolean reactOnName = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
                         settings.setReactOnName(reactOnName);
                         ServerDatabase.setSettings(ID, settings);
+                        settingsCache.put(ID, settings);
                         event.reply("`Name reactions are " + (reactOnName ? "on" : "off") + "!`").queue();
                     } else if (command[1].equalsIgnoreCase("on-reply-react")) {
                         boolean reactOnReply = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
                         settings.setReactOnReply(reactOnReply);
                         ServerDatabase.setSettings(ID, settings);
+                        settingsCache.put(ID, settings);
                         event.reply("`Reply reactions are " + (reactOnReply ? "on" : "off") + "!`").queue();
                     }
                 }
@@ -159,7 +163,6 @@ public class RBOD extends ListenerAdapter {
                 }
                 break;
 
-                //TODO: Add cache methods
             case "names":
                 try {
                     if (command[1].equalsIgnoreCase("add")) {
@@ -176,6 +179,7 @@ public class RBOD extends ListenerAdapter {
                         } else {
                             settings.addName(name);
                             ServerDatabase.setSettings(ID, settings);
+                            settingsCache.put(ID, settings);
                             event.reply("`Added '" + name + "' to the name list. Wowza!`").queue();
                         }
                     } else if (command[1].equalsIgnoreCase("remove")) {
@@ -192,6 +196,7 @@ public class RBOD extends ListenerAdapter {
                         } else {
                             settings.removeName(name);
                             ServerDatabase.setSettings(ID, settings);
+                            settingsCache.put(ID, settings);
                             event.reply("`Removed '" + name + "' from the name list. Fiddlesticks...`").queue();
                         }
                     } else if (command[1].equalsIgnoreCase("list")) {
@@ -209,12 +214,14 @@ public class RBOD extends ListenerAdapter {
                 }
             break;
 
-                //TODO: Add cache methods
             case "phrases":
                 try {
+                    List<String> phrases = phrasesCache.get(ID);
+                    if (phrases == null || phrases.isEmpty()) {
+                        phrases = ServerDatabase.getCustomPhrases(ID);
+                    }
                     if (command[1].equalsIgnoreCase("add")) {
                         String phrase = Objects.requireNonNull(event.getOption("phrase")).getAsString();
-                        List<String> phrases = ServerDatabase.getCustomPhrases(ID);
                         if (phrases == null || phrases.isEmpty()) {
                             phrases = new ArrayList<>();
                         }
@@ -224,11 +231,11 @@ public class RBOD extends ListenerAdapter {
                         }
                         phrases.add(phrase);
                         ServerDatabase.setCustomPhrases(ID, phrases);
+                        phrasesCache.put(ID, phrases);
                         event.reply("`Added the following phrase to the list: '" + phrase + "'`").queue();
                     }
                     else if (command[1].equalsIgnoreCase("remove")) {
                         int index = Objects.requireNonNull(event.getOption("index")).getAsInt() - 1;
-                        List<String> phrases = ServerDatabase.getCustomPhrases(ID);
                         if (phrases == null || phrases.isEmpty()) {
                             event.reply("`There are no custom phrases for this server.`").queue();
                             return;
@@ -239,11 +246,12 @@ public class RBOD extends ListenerAdapter {
                         else {
                             phrases.remove(index);
                             ServerDatabase.setCustomPhrases(ID, phrases);
+                            phrasesCache.put(ID, phrases);
                             event.reply("`Removed custom phrase " + (index + 1) + " from the list.`").queue();
                         }
                     }
                     else if (command[1].equalsIgnoreCase("list")) {
-                        List<String> phrases = ServerDatabase.getCustomPhrases(ID);
+                        //TODO: Paginate phrases (create a method for this, with 'phrases' as an argument)
                         if (phrases == null || phrases.isEmpty()) {
                             event.reply("`There are no custom phrases for this server.`").queue();
                             return;
@@ -263,15 +271,16 @@ public class RBOD extends ListenerAdapter {
                 }
             break;
 
-                //TODO: Add cache methods
             case "reset":
                 String option = event.getOption("data") == null? "" : Objects.requireNonNull(event.getOption("data")).getAsString();
                 if (option.isBlank() || option.equalsIgnoreCase("all")) {
                     try {
                         ServerDatabase.removeServer(ID);
                         ServerDatabase.addServer(ID);
+                        settingsCache.put(ID, new SettingsObj());
                         ServerDatabase.removeServerFromCustomPhrases(ID);
                         ServerDatabase.addServerToCustomPhrases(ID);
+                        phrasesCache.put(ID, new ArrayList<>());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -281,6 +290,7 @@ public class RBOD extends ListenerAdapter {
                     try {
                         ServerDatabase.removeServer(ID);
                         ServerDatabase.addServer(ID);
+                        settingsCache.put(ID, new SettingsObj());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -290,6 +300,7 @@ public class RBOD extends ListenerAdapter {
                     try {
                         ServerDatabase.removeServerFromCustomPhrases(ID);
                         ServerDatabase.addServerToCustomPhrases(ID);
+                        phrasesCache.put(ID, new ArrayList<>());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
