@@ -60,6 +60,7 @@ public class RBOD extends ListenerAdapter {
                     ServerDatabase.addServer(ID);
                     settings = new SettingsObj();
                     settingsCache.put(ID, settings);
+                    return null;
                 }
             }
             catch (IOException e) {
@@ -117,22 +118,8 @@ public class RBOD extends ListenerAdapter {
         String ID = Objects.requireNonNull(event.getGuild()).getId();
         SettingsObj settings = getSettingsFromCache(ID);
         if (settings == null) {
-            try {
-                settings = ServerDatabase.getSettings(ID);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            if (settings == null) {
-                event.reply("`Settings not found. Creating new settings for server. Run the command again.`").queue();
-                try {
-                    ServerDatabase.addServer(ID);
-                    settingsCache.put(ID, new SettingsObj());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                return;
-            }
-            settingsCache.put(ID, settings);
+            event.reply("`Settings not found or are corrupted. New settings have been made. Run the command again.`").queue();
+            return;
         }
         String[] command = event.getFullCommandName()
                 .toLowerCase()
