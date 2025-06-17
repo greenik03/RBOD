@@ -26,6 +26,7 @@ public class ServerClass {
         this.settings = settings;
     }
 
+    //TODO: Change string format
     @Override
     public String toString() {
         return "Server {" +

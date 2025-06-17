@@ -101,7 +101,7 @@ public class ServerDatabase {
         }
     }
 
-    // IOException thrown from if statement is handled in main code
+    // IOException thrown from if condition is handled in main code
     public static void addServer(String serverId) throws IOException {
         databaseLock.writeLock().lock();
         try {

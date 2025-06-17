@@ -50,6 +50,7 @@ public class SettingsObj implements Serializable {
         this.reactOnReply = reactOnReply;
     }
 
+    //TODO: change string format
     @Override
     public String toString() {
         return "Settings {" +
