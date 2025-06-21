@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -221,11 +222,14 @@ public class RBOD extends ListenerAdapter {
                             event.reply("`That phrase is already in the list.`").queue();
                             return;
                         }
+                        if (phrase.length() > 1900) {
+                            event.reply("`That phrase is too long. Max length is 1900 characters.`").queue();
+                            return;
+                        }
                         phrases.add(phrase);
                         ServerDatabase.setCustomPhrases(ID, phrases);
                         phrasesCache.put(ID, phrases);
-                        //TODO: Change to index to avoid hitting character limit
-                        event.reply("`Added the following phrase to the list: '" + phrase + "'`").queue();
+                        event.reply("`Added the phrase to the list with index: " + phrases.size() + "`").queue();
                     }
                     else if (command[1].equalsIgnoreCase("remove")) {
                         int index = Objects.requireNonNull(event.getOption("index")).getAsInt() - 1;
@@ -244,7 +248,6 @@ public class RBOD extends ListenerAdapter {
                         }
                     }
                     else if (command[1].equalsIgnoreCase("list")) {
-                        //TODO: Paginate phrases (create a method for this, with 'phrases' as an argument)
                         if (phrases == null || phrases.isEmpty()) {
                             event.reply("`There are no custom phrases for this server.`").queue();
                             return;
@@ -369,18 +372,27 @@ public class RBOD extends ListenerAdapter {
         String buttonID = String.format("%s-%s", serverID, channelID);
         PaginatorSession session = paginatorManager.getSession(buttonID);
         if (session == null) {
-            event.editMessage("`Session expired! Use '/phrases list' for a new one.`").queue();
+            event.editMessage("`Session expired! Use '/phrases list' for a new one.`")
+                    .setComponents() // leave no arguments for no buttons
+                    .queue();
             return;
         }
-        //TODO: Update button status
         if (event.getComponentId().equals(buttonID + "-next")) {
             if (session.nextPage()) {
-                event.editMessage(session.getCurrentPage()).queue();
+                Button btnNext = (session.getCurrentPageNumber() == session.getPageCount())?
+                        event.getButton().asDisabled() : event.getButton().asEnabled();
+                Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-prev", "<-");
+                btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
+                event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
             }
         }
         else if (event.getComponentId().equals(buttonID + "-prev")) {
             if (session.previousPage()) {
-                event.editMessage(session.getCurrentPage()).queue();
+                Button btnPrev = (session.getCurrentPageNumber() == 1)?
+                        event.getButton().asDisabled() : event.getButton().asEnabled();
+                Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-next", "->");
+                btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
+                event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
             }
         }
         else {
