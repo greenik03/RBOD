@@ -1,16 +1,20 @@
 package g03.discord.rbod;
 
+import g03.discord.rbod.paginator.PaginatorManager;
+import g03.discord.rbod.paginator.PaginatorSession;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -25,6 +29,7 @@ public class RBOD extends ListenerAdapter {
     static Random rng = new Random();
     static HashMap<String, List<String>> phrasesCache = new HashMap<>();
     static HashMap<String, SettingsObj> settingsCache = new HashMap<>();
+    PaginatorManager paginatorManager = new PaginatorManager();
 
     public static void cacheInit(List<Guild> guilds) {
         // regular boolean data type doesn't work inside the lambda expression of forEach
@@ -219,6 +224,7 @@ public class RBOD extends ListenerAdapter {
                         phrases.add(phrase);
                         ServerDatabase.setCustomPhrases(ID, phrases);
                         phrasesCache.put(ID, phrases);
+                        //TODO: Change to index to avoid hitting character limit
                         event.reply("`Added the following phrase to the list: '" + phrase + "'`").queue();
                     }
                     else if (command[1].equalsIgnoreCase("remove")) {
@@ -243,12 +249,19 @@ public class RBOD extends ListenerAdapter {
                             event.reply("`There are no custom phrases for this server.`").queue();
                             return;
                         }
-                        StringBuilder builder = new StringBuilder("```\nThe current custom phrases list is:\n");
-                        for (int i = 0; i < phrases.size(); i++) {
-                            builder.append(i + 1).append(". ").append(phrases.get(i)).append("\n");
+                        PaginatorSession session = paginatorManager.createSession(ID, event.getChannelId(), phrases);
+                        if (session.getPageCount() == 1) {
+                            event.reply(session.getCurrentPage()).queue();
                         }
-                        builder.append("\n```");
-                        event.reply(builder.toString()).queue();
+                        else {
+                            String sessionID = String.format("%s-%s", ID, event.getChannelId());
+                            Button btnNext = Button.secondary(sessionID + "-next", "->")
+                                    .withDisabled(session.getCurrentPageNumber() == session.getPageCount());
+                            Button btnPrev = Button.secondary(sessionID + "-prev", "<-")
+                                    .withDisabled(session.getCurrentPageNumber() == 1);
+
+                            event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
+                        }
                     }
                 }
                 catch (IOException e) {
@@ -350,6 +363,32 @@ public class RBOD extends ListenerAdapter {
     }
 
     @Override
+    public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
+        String serverID = Objects.requireNonNull(event.getGuild()).getId(),
+            channelID = event.getChannelId();
+        String buttonID = String.format("%s-%s", serverID, channelID);
+        PaginatorSession session = paginatorManager.getSession(buttonID);
+        if (session == null) {
+            event.editMessage("`Session expired! Use '/phrases list' for a new one.`").queue();
+            return;
+        }
+        //TODO: Update button status
+        if (event.getComponentId().equals(buttonID + "-next")) {
+            if (session.nextPage()) {
+                event.editMessage(session.getCurrentPage()).queue();
+            }
+        }
+        else if (event.getComponentId().equals(buttonID + "-prev")) {
+            if (session.previousPage()) {
+                event.editMessage(session.getCurrentPage()).queue();
+            }
+        }
+        else {
+            System.err.println(systemMessagePrefix + "Unknown button interaction: " + event.getComponentId());
+        }
+    }
+
+    @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         SelfUser self = event.getJDA().getSelfUser();
         // Do not reply to self
@@ -435,6 +474,7 @@ public class RBOD extends ListenerAdapter {
     @Override
     public void onShutdown(@NotNull ShutdownEvent event) {
         System.out.println(systemMessagePrefix + "Bot is shutting down...");
+        paginatorManager.shutdown();
     }
 
     // Message when bot joins a guild/server
