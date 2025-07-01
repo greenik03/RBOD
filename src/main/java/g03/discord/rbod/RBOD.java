@@ -127,6 +127,7 @@ public class RBOD extends ListenerAdapter {
             event.reply("`Settings not found or are corrupted. New settings have been made. Run the command again.`").queue();
             return;
         }
+        //TODO: boolean ephemeral = settings.getEphemeral() (default: false);
         String[] command = event.getFullCommandName()
                 .toLowerCase()
                 .trim()
@@ -148,6 +149,7 @@ public class RBOD extends ListenerAdapter {
                         settingsCache.put(ID, settings);
                         event.reply("`Reply reactions are " + (reactOnReply ? "on" : "off") + "!`").queue();
                     }
+                    //TODO: elif (subcommand == "secretUpdates" (name is WIP))
                 }
                 catch (IOException e) {
                     event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
@@ -193,11 +195,12 @@ public class RBOD extends ListenerAdapter {
                             event.reply("`Removed '" + name + "' from the name list. Fiddlesticks...`").queue();
                         }
                     } else if (command[1].equalsIgnoreCase("list")) {
-                        StringBuilder builder = new StringBuilder("```\nThe current name list is:\n");
+                        StringBuilder builder = new StringBuilder();
                         for (String name : settings.getNames()) {
                             builder.append(name).append("\n");
                         }
-                        event.reply(builder.append("\n```").toString()).queue();
+                        String finalMessage = String.format("```\nThe current name list is:\n\n%s```", builder);
+                        event.reply(finalMessage).queue();
                     }
                 }
                 catch (IOException e) {
@@ -229,6 +232,9 @@ public class RBOD extends ListenerAdapter {
                         phrases.add(phrase);
                         ServerDatabase.setCustomPhrases(ID, phrases);
                         phrasesCache.put(ID, phrases);
+                        if (paginatorManager.getSession(ID) != null) {
+                            paginatorManager.updateSession(ID, phrases);
+                        }
                         event.reply("`Added the phrase to the list with index: " + phrases.size() + "`").queue();
                     }
                     else if (command[1].equalsIgnoreCase("remove")) {
@@ -244,6 +250,9 @@ public class RBOD extends ListenerAdapter {
                             phrases.remove(index);
                             ServerDatabase.setCustomPhrases(ID, phrases);
                             phrasesCache.put(ID, phrases);
+                            if (paginatorManager.getSession(ID) != null) {
+                                paginatorManager.updateSession(ID, phrases);
+                            }
                             event.reply("`Removed custom phrase " + (index + 1) + " from the list.`").queue();
                         }
                     }
@@ -252,15 +261,27 @@ public class RBOD extends ListenerAdapter {
                             event.reply("`There are no custom phrases for this server.`").queue();
                             return;
                         }
-                        PaginatorSession session = paginatorManager.createSession(ID, event.getChannelId(), phrases);
+                        // Initialization of the session variable is done like this in the event a user tries using the page number option
+                        // (Autocomplete needs a session to provide options for the user, so it can create one if it doesn't exist)
+                        PaginatorSession session = paginatorManager.getSession(ID);
+                        if (session == null) {
+                            session = paginatorManager.createSession(ID, phrases);
+                        }
                         if (session.getPageCount() == 1) {
                             event.reply(session.getCurrentPage()).queue();
                         }
                         else {
-                            String sessionID = String.format("%s-%s", ID, event.getChannelId());
-                            Button btnNext = Button.secondary(sessionID + "-next", "->")
+                            if (event.getOption("page") != null) {
+                                int page = Objects.requireNonNull(event.getOption("page")).getAsInt();
+                                if (page <= 0 || page > session.getPageCount()) {
+                                    page = 1;
+                                }
+                                session.setPageNumber(page);
+                            }
+                            String buttonID = String.format("%s-%s", ID, event.getChannelId());
+                            Button btnNext = Button.secondary(buttonID + "-next", "->")
                                     .withDisabled(session.getCurrentPageNumber() == session.getPageCount());
-                            Button btnPrev = Button.secondary(sessionID + "-prev", "<-")
+                            Button btnPrev = Button.secondary(buttonID + "-prev", "<-")
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
                             event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
@@ -315,6 +336,8 @@ public class RBOD extends ListenerAdapter {
                 break;
 
             case "help":
+                //TODO: Edit help message (and README) after implementing new commands:
+                //  - toggle setEphemeral
                 event.reply("""
                     ```
                     Here are the commands you can use:
@@ -335,7 +358,9 @@ public class RBOD extends ListenerAdapter {
                     /phrases remove [index] - Removes the custom phrase at the specified index from the list of custom phrases for this server.
                     (You can find the index by typing '/phrases list')
                     
-                    /phrases list - Lists all the custom phrases for this server, with indexes.
+                    /phrases list [page] - Lists all the custom phrases for this server, with indexes.
+                    The message that is sent will be divided into pages if it surpasses the character limit.
+                    [page] will default to 1 if not specified or doesn't exist. Autocomplete will max out at 25.
                     (Default: empty)
                     
                     /reset [data] - Resets the bot's settings and/or custom phrases for this server to default.
@@ -363,6 +388,24 @@ public class RBOD extends ListenerAdapter {
                     .toList();
             event.replyChoices(choices).queue();
         }
+        if (event.getName().equalsIgnoreCase("phrases") && event.getFocusedOption().getName().equalsIgnoreCase("page")) {
+            if (event.isFromGuild()) {
+                String ID = Objects.requireNonNull(event.getGuild()).getId();
+                PaginatorSession session = paginatorManager.getSession(ID);
+                if (session == null) {
+                    session = paginatorManager.createSession(ID, phrasesCache.get(ID));
+                }
+                List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
+                        .limit(Math.min(session.getPageCount(), 25))
+                        .filter(number -> String.valueOf(number).startsWith(event.getFocusedOption().getValue()))
+                        .map(i -> new Command.Choice(String.valueOf(i), i))
+                        .toList();
+                event.replyChoices(choices).queue();
+            }
+            else {
+                event.replyChoices().queue();
+            }
+        }
     }
 
     @Override
@@ -370,7 +413,8 @@ public class RBOD extends ListenerAdapter {
         String serverID = Objects.requireNonNull(event.getGuild()).getId(),
             channelID = event.getChannelId();
         String buttonID = String.format("%s-%s", serverID, channelID);
-        PaginatorSession session = paginatorManager.getSession(buttonID);
+        PaginatorSession session = paginatorManager.getSession(serverID);
+        // sessions are null if not accessed after 20 minutes and cleanup deleted them
         if (session == null) {
             event.editMessage("`Session expired! Use '/phrases list' for a new one.`")
                     .setComponents() // leave no arguments for no buttons
@@ -414,7 +458,7 @@ public class RBOD extends ListenerAdapter {
         }
 
         // Respond to direct messages
-        if (!event.isFromGuild()) {
+        if (!event.isFromGuild() && event.getChannel().asPrivateChannel().canTalk()) {
             // null is for global phrases only
             String reply = getPhraseFromCache(null);
             event.getChannel()
@@ -423,6 +467,7 @@ public class RBOD extends ListenerAdapter {
             return;
         }
 
+        // if the bot can't send messages in a channel, stop here
         if (!event.getChannel().asGuildMessageChannel().canTalk()) {
             return;
         }

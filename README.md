@@ -16,7 +16,7 @@ Interaction by @mention is always enabled, but there are optional triggers that 
 - `/names add [name]` - Adds [name] the user inputs to the list of names. (case-insensitive)
 - `/names remove [name]` - Removes [name] the user inputs from the list of names. (case-insensitive)
 - `/phrases add [phrase]` - Adds [phrase] to the list of server-only (custom) phrases for the bot to use. (case-sensitive; [read "Phrase Formatting" in guide.md for more](assets/guide.md))
-- `/phrases list` - Lists all custom phrases for the server, with indexes. **Default: empty**
+- `/phrases list [page]` - Lists all custom phrases for the server, with indexes. [page] will be set to 1 if not provided, or the given page number doesn't exist. **Default: empty**
 - `/phrases remove [index]` - Removes the phrase at the given index from the list of custom phrases.
 - `/reset [data]` - Resets the bot's settings and/or custom phrases for the server the command was executed from back to default.
 - `/help` - Brings up the list of commands.

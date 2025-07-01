@@ -3,14 +3,14 @@ package g03.discord.rbod.paginator;
 import java.util.List;
 
 public class PaginatorSession {
-    private final List<String> pages;
+    private List<String> pages;
     private int currentPage;
     private long lastAccessed;
 
     public PaginatorSession(List<String> pages) {
         this.pages = pages;
         currentPage = 0;
-        lastAccessed = System.currentTimeMillis() / 1000;
+        lastAccessed = System.currentTimeMillis() / 1000;   // time in seconds
     }
 
     public String getCurrentPage() {
@@ -36,7 +36,14 @@ public class PaginatorSession {
         return true;
     }
 
-    public List<String> getPages() { return pages; }
+    public void setPageNumber(int page) {
+//        if (page <= 0 || page > pages.size()) {
+//            throw new IllegalArgumentException("Page number must be between 0 and " + (pages.size()-1));
+//        }
+        // Invalid page number is handled before calling this method
+        setLastAccessed();
+        currentPage = page-1;
+    }
 
     public int getCurrentPageNumber() { return currentPage + 1; }
 
@@ -45,4 +52,6 @@ public class PaginatorSession {
     public long getLastAccessed() { return lastAccessed; }
 
     public void setLastAccessed() { lastAccessed = System.currentTimeMillis() / 1000; }
+
+    public void setPages(List<String> pages) { this.pages = pages; }
 }

@@ -1,4 +1,5 @@
 package g03.discord.rbod;
+//TODO: Store in package "objects"
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -6,7 +7,7 @@ import java.util.List;
 
 public class SettingsObj implements Serializable {
     List<String> names;
-    boolean reactOnName, reactOnReply;
+    boolean reactOnName, reactOnReply; //TODO: add field for ephemeral messages (and then edit the database)
 
     public SettingsObj() {
         reactOnName = false;

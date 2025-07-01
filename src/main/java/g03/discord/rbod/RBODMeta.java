@@ -32,18 +32,18 @@ public class RBODMeta {
             GatewayIntent.DIRECT_MESSAGES,
             GatewayIntent.MESSAGE_CONTENT
     );
-    static String systemMessagePrefix = "[RBOD]: ";
+    public static String systemMessagePrefix = "[RBOD]: ";
 
     // Start of main method
     public static void main(String[] args) {
         // Prevent the bot from starting until it has all the data it needs
         String token = readTokenFromFile();
         if (token == null) {
-            System.out.println(systemMessagePrefix + "No token found in assets/token.txt. Please add a token and restart the bot.");
+            System.out.println(systemMessagePrefix + "No token found in "+ discordToken.getPath() +". Please add a token and restart the bot.");
             return;
         }
         if (readPhrasesFromFile().isEmpty()) {
-            System.out.println(systemMessagePrefix + "assets/phrases.txt has just been created with placeholder text. Restart the bot after adding phrases to it.");
+            System.out.println(systemMessagePrefix + phrases.getPath() + " has just been created with placeholder text. Restart the bot after adding phrases to it.");
             return;
         }
 
@@ -86,12 +86,14 @@ public class RBODMeta {
                                 new SubcommandData("add", "Adds a phrase to the custom phrases list.")
                                         .addOption(OptionType.STRING, "phrase", "The phrase to add for this server.", true),
                                 new SubcommandData("remove", "Removes a phrase from the custom phrases list.")
-                                        .addOption(OptionType.INTEGER, "index", "The index of the phrase to remove. (Use the list subcommand for reference)", true),
-                                new SubcommandData("list", "Lists all the phrases for this server, with indexes.")
+                                        .addOption(OptionType.INTEGER, "index", "The index of the phrase to remove. (Use the list subcommand for reference!)", true),
+                                new SubcommandData("list", "Lists all the phrases for this server, with indexes, divided into pages if necessary.")
+                                        .addOption(OptionType.INTEGER, "page", "The page to show first. (Autocomplete maxes out at 25 due to Discord's limitations)", false, true)
                         )
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
         ).queue();
+        //TODO: Add context menu command
 
         ServerDatabase.init();
         try {
@@ -183,7 +185,7 @@ public class RBODMeta {
 
     static void printCLIUsage() {
         System.out.println(systemMessagePrefix + "Here are the commands you can use:");
-        System.out.println("\tcache - Interact with the cache with the following subcommands:");
+        System.out.println("\tcache - Interact with the cache using the following subcommands:");
         System.out.println("\t\treset - Resets the cache.");
         System.out.println("\tlistservers - Lists all the servers in the database and cache.");
         System.out.println("\tping - Prints the bot's ping to Discord.");
@@ -243,6 +245,7 @@ public class RBODMeta {
     }
 
     public static boolean messageContainsExactString(String message, String string) {
+        // the \b escape sequence indicates non-alphanumeric characters
         String exactName = "\\b" + Pattern.quote(string) + "\\b";
         Pattern pattern = Pattern.compile(exactName, Pattern.CASE_INSENSITIVE);
         return pattern.matcher(message).find();

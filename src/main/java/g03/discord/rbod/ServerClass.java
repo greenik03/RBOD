@@ -1,6 +1,8 @@
 package g03.discord.rbod;
+//TODO: Store in package "objects"
 
 // Used to be Serializable, only used to show server info in the CLI (for now)
+// TODO: remove unnecessary getters and setters
 public class ServerClass {
     String serverId;
     SettingsObj settings;
