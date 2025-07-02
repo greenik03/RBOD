@@ -1,5 +1,6 @@
 package g03.discord.rbod;
 
+import g03.discord.rbod.paginator.NamesPaginatorManager;
 import g03.discord.rbod.paginator.PaginatorManager;
 import g03.discord.rbod.paginator.PaginatorSession;
 import net.dv8tion.jda.api.entities.*;
@@ -31,6 +32,7 @@ public class RBOD extends ListenerAdapter {
     static HashMap<String, List<String>> phrasesCache = new HashMap<>();
     static HashMap<String, SettingsObj> settingsCache = new HashMap<>();
     PaginatorManager paginatorManager = new PaginatorManager();
+    NamesPaginatorManager namesPM = new NamesPaginatorManager();
 
     public static void cacheInit(List<Guild> guilds) {
         // regular boolean data type doesn't work inside the lambda expression of forEach
@@ -175,6 +177,9 @@ public class RBOD extends ListenerAdapter {
                             settings.addName(name);
                             ServerDatabase.setSettings(ID, settings);
                             settingsCache.put(ID, settings);
+                            if (namesPM.getSession(ID) != null) {
+                                namesPM.updateSession(ID, settings.getNames());
+                            }
                             event.reply("`Added '" + name + "' to the name list. Wowza!`").queue();
                         }
                     } else if (command[1].equalsIgnoreCase("remove")) {
@@ -192,15 +197,40 @@ public class RBOD extends ListenerAdapter {
                             settings.removeName(name);
                             ServerDatabase.setSettings(ID, settings);
                             settingsCache.put(ID, settings);
+                            if (namesPM.getSession(ID) != null) {
+                                namesPM.updateSession(ID, settings.getNames());
+                            }
                             event.reply("`Removed '" + name + "' from the name list. Fiddlesticks...`").queue();
                         }
                     } else if (command[1].equalsIgnoreCase("list")) {
-                        StringBuilder builder = new StringBuilder();
-                        for (String name : settings.getNames()) {
-                            builder.append(name).append("\n");
+                        List<String> names = settings.getNames();
+                        if (names == null || names.isEmpty()) {
+                            event.reply("`There are no names for the bot in this server.`").queue();
+                            return;
                         }
-                        String finalMessage = String.format("```\nThe current name list is:\n\n%s```", builder);
-                        event.reply(finalMessage).queue();
+                        PaginatorSession session = namesPM.getSession(ID);
+                        if (session == null) {
+                            session = namesPM.createSession(ID, names);
+                        }
+                        if (session.getPageCount() == 1) {
+                            event.reply(session.getCurrentPage()).queue();
+                        }
+                        else {
+                            if (event.getOption("page") != null) {
+                                int page = Objects.requireNonNull(event.getOption("page")).getAsInt();
+                                if (page <= 0 || page > session.getPageCount()) {
+                                    page = 1;
+                                }
+                                session.setPageNumber(page);
+                            }
+                            String buttonID = String.format("%s-%s", ID, event.getChannelId());
+                            Button btnNext = Button.secondary(buttonID + "-npm-next", "->")
+                                    .withDisabled(session.getCurrentPageNumber() == session.getPageCount());
+                            Button btnPrev = Button.secondary(buttonID + "-npm-prev", "<-")
+                                    .withDisabled(session.getCurrentPageNumber() == 1);
+
+                            event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
+                        }
                     }
                 }
                 catch (IOException e) {
@@ -279,9 +309,9 @@ public class RBOD extends ListenerAdapter {
                                 session.setPageNumber(page);
                             }
                             String buttonID = String.format("%s-%s", ID, event.getChannelId());
-                            Button btnNext = Button.secondary(buttonID + "-next", "->")
+                            Button btnNext = Button.secondary(buttonID + "-pm-next", "->")
                                     .withDisabled(session.getCurrentPageNumber() == session.getPageCount());
-                            Button btnPrev = Button.secondary(buttonID + "-prev", "<-")
+                            Button btnPrev = Button.secondary(buttonID + "-pm-prev", "<-")
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
                             event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
@@ -347,7 +377,9 @@ public class RBOD extends ListenerAdapter {
                     
                     /names [add | remove] [name] - Adds/Removes [name] to/from the list of names the bot reacts to. (case-insensitive)
                     
-                    /names list - Lists all the names the bot reacts to.
+                    /names list [page] - Lists all the names the bot reacts to, sorted alphabetically.
+                    The message that is sent will be divided into pages, each page containing 20 names.
+                    [page] will default to 1 if not specified or doesn't exist. Autocomplete will max out at 25.
                     (Default names: 'react bot', 'reactbot', 'rbod')
                     
                     /phrases add [phrase] - Adds [phrase] to the list of custom phrases for this server. (case-sensitive)
@@ -381,26 +413,56 @@ public class RBOD extends ListenerAdapter {
     @Override
     public void onCommandAutoCompleteInteraction(@NotNull CommandAutoCompleteInteractionEvent event) {
         if (event.getName().equalsIgnoreCase("reset") && event.getFocusedOption().getName().equalsIgnoreCase("data")) {
-            String[] options = new String[] {"all", "settings", "phrases"};
-            List<Command.Choice> choices = Stream.of(options)
-                    .filter(word -> word.startsWith(event.getFocusedOption().getValue()))
-                    .map(word -> new Command.Choice(word, word))
-                    .toList();
-            event.replyChoices(choices).queue();
+            if (event.isFromGuild()) {
+                String[] options = new String[]{"all", "settings", "phrases"};
+                List<Command.Choice> choices = Stream.of(options)
+                        .filter(word -> word.startsWith(event.getFocusedOption().getValue()))
+                        .map(word -> new Command.Choice(word, word))
+                        .toList();
+                event.replyChoices(choices).queue();
+            }
+            else {
+                event.replyChoices().queue();
+            }
+            return;
         }
         if (event.getName().equalsIgnoreCase("phrases") && event.getFocusedOption().getName().equalsIgnoreCase("page")) {
             if (event.isFromGuild()) {
                 String ID = Objects.requireNonNull(event.getGuild()).getId();
-                PaginatorSession session = paginatorManager.getSession(ID);
-                if (session == null) {
-                    session = paginatorManager.createSession(ID, phrasesCache.get(ID));
+                if (phrasesCache.get(ID) != null && !phrasesCache.get(ID).isEmpty()) {
+                    PaginatorSession session = paginatorManager.getSession(ID);
+                    if (session == null) {
+                        session = paginatorManager.createSession(ID, phrasesCache.get(ID));
+                    }
+                    List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
+                            .limit(Math.min(session.getPageCount(), 25))
+                            .filter(number -> String.valueOf(number).startsWith(event.getFocusedOption().getValue()))
+                            .map(i -> new Command.Choice(String.valueOf(i), i))
+                            .toList();
+                    event.replyChoices(choices).queue();
                 }
-                List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
-                        .limit(Math.min(session.getPageCount(), 25))
-                        .filter(number -> String.valueOf(number).startsWith(event.getFocusedOption().getValue()))
-                        .map(i -> new Command.Choice(String.valueOf(i), i))
-                        .toList();
-                event.replyChoices(choices).queue();
+            }
+            else {
+                event.replyChoices().queue();
+            }
+            return;
+        }
+        if (event.getName().equalsIgnoreCase("names") && event.getFocusedOption().getName().equalsIgnoreCase("page")) {
+            if (event.isFromGuild()) {
+                String ID = Objects.requireNonNull(event.getGuild()).getId();
+                List<String> names = getSettingsFromCache(ID).getNames();
+                if (names != null && !names.isEmpty()) {
+                    PaginatorSession session = namesPM.getSession(ID);
+                    if (session == null) {
+                        session = namesPM.createSession(ID, names);
+                    }
+                    List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
+                            .limit(Math.min(session.getPageCount(), 25))
+                            .filter(number -> String.valueOf(number).startsWith(event.getFocusedOption().getValue()))
+                            .map(i -> new Command.Choice(String.valueOf(i), i))
+                            .toList();
+                    event.replyChoices(choices).queue();
+                }
             }
             else {
                 event.replyChoices().queue();
@@ -413,30 +475,67 @@ public class RBOD extends ListenerAdapter {
         String serverID = Objects.requireNonNull(event.getGuild()).getId(),
             channelID = event.getChannelId();
         String buttonID = String.format("%s-%s", serverID, channelID);
-        PaginatorSession session = paginatorManager.getSession(serverID);
-        // sessions are null if not accessed after 20 minutes and cleanup deleted them
-        if (session == null) {
-            event.editMessage("`Session expired! Use '/phrases list' for a new one.`")
-                    .setComponents() // leave no arguments for no buttons
-                    .queue();
+        if (event.getComponentId().contains("pm")) {
+            PaginatorSession session = paginatorManager.getSession(serverID);
+            // sessions are null if not accessed after 20 minutes and cleanup deleted them
+            if (session == null) {
+                event.editMessage("`Session expired! Use '/phrases list' for a new one.`")
+                        .setComponents() // leave no arguments for no buttons
+                        .queue();
+                return;
+            }
+            if (event.getComponentId().equals(buttonID + "-pm-next")) {
+                if (session.nextPage()) {
+                    Button btnNext = (session.getCurrentPageNumber() == session.getPageCount())?
+                            event.getButton().asDisabled() : event.getButton().asEnabled();
+                    Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-pm-prev", "<-");
+                    btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
+                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                }
+            }
+            else if (event.getComponentId().equals(buttonID + "-pm-prev")) {
+                if (session.previousPage()) {
+                    Button btnPrev = (session.getCurrentPageNumber() == 1)?
+                            event.getButton().asDisabled() : event.getButton().asEnabled();
+                    Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-pm-next", "->");
+                    btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
+                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                }
+            }
+            else {
+                System.err.println(systemMessagePrefix + "Unknown button interaction: " + event.getComponentId());
+            }
             return;
         }
-        if (event.getComponentId().equals(buttonID + "-next")) {
-            if (session.nextPage()) {
-                Button btnNext = (session.getCurrentPageNumber() == session.getPageCount())?
-                        event.getButton().asDisabled() : event.getButton().asEnabled();
-                Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-prev", "<-");
-                btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
-                event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+        if (event.getComponentId().contains("npm")) {
+            PaginatorSession session = namesPM.getSession(serverID);
+            // sessions are null if not accessed after 20 minutes and cleanup deleted them
+            if (session == null) {
+                event.editMessage("`Session expired! Use '/names list' for a new one.`")
+                        .setComponents() // leave no arguments for no buttons
+                        .queue();
+                return;
             }
-        }
-        else if (event.getComponentId().equals(buttonID + "-prev")) {
-            if (session.previousPage()) {
-                Button btnPrev = (session.getCurrentPageNumber() == 1)?
-                        event.getButton().asDisabled() : event.getButton().asEnabled();
-                Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-next", "->");
-                btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
-                event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+            if (event.getComponentId().equals(buttonID + "-npm-next")) {
+                if (session.nextPage()) {
+                    Button btnNext = (session.getCurrentPageNumber() == session.getPageCount())?
+                            event.getButton().asDisabled() : event.getButton().asEnabled();
+                    Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-npm-prev", "<-");
+                    btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
+                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                }
+            }
+            else if (event.getComponentId().equals(buttonID + "-npm-prev")) {
+                if (session.previousPage()) {
+                    Button btnPrev = (session.getCurrentPageNumber() == 1)?
+                            event.getButton().asDisabled() : event.getButton().asEnabled();
+                    Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-npm-next", "->");
+                    btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
+                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                }
+            }
+            else {
+                System.err.println(systemMessagePrefix + "Unknown button interaction: " + event.getComponentId());
             }
         }
         else {
@@ -532,6 +631,7 @@ public class RBOD extends ListenerAdapter {
     public void onShutdown(@NotNull ShutdownEvent event) {
         System.out.println(systemMessagePrefix + "Bot is shutting down...");
         paginatorManager.shutdown();
+        namesPM.shutdown();
     }
 
     // Message when bot joins a guild/server
@@ -573,6 +673,8 @@ public class RBOD extends ListenerAdapter {
         }
         phrasesCache.remove(guild.getId());
         settingsCache.remove(guild.getId());
+        paginatorManager.removeSession(guild.getId());
+        namesPM.removeSession(guild.getId());
         System.out.println(systemMessagePrefix + "Left guild " + guild.getName() + " (" + guild.getId() + ").");
     }
 }

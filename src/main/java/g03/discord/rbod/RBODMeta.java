@@ -71,6 +71,7 @@ public class RBODMeta {
                                 new SubcommandData("remove", "Removes a name from the list of names the bot reacts to.")
                                         .addOption(OptionType.STRING, "name", "The name to remove from the list.", true),
                                 new SubcommandData("list", "Lists all the names the bot reacts to.")
+                                        .addOption(OptionType.INTEGER, "page", "The page to show first. (Autocomplete maxes out at 25 due to Discord's limitations)", false, true)
                         )
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),

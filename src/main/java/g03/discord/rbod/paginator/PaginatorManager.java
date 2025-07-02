@@ -1,5 +1,7 @@
 package g03.discord.rbod.paginator;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,13 +12,13 @@ import java.util.concurrent.TimeUnit;
 
 import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
 
-public class PaginatorManager {
+public class PaginatorManager implements Paginator {
     private static final long CLEANUP_INTERVAL_SEC = 600;   // 10 minutes
     private static final long SESSION_TIMEOUT_SEC = 1200;   // 20 minutes
     private static final int MAX_PAGE_LENGTH = 1900;        // slightly under Discord's 2000 char limit for extra info in messages
 
-    private final Map<String, PaginatorSession> sessions = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
+    protected final Map<String, PaginatorSession> sessions = new ConcurrentHashMap<>();
+    protected final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public PaginatorManager() {
         cleanupExecutor.scheduleWithFixedDelay(
@@ -31,39 +33,47 @@ public class PaginatorManager {
         System.out.println("Max page length: " + MAX_PAGE_LENGTH + " characters.");
     }
 
-    public PaginatorSession createSession(String serverId, List<String> content) {
+    @Override
+    public PaginatorSession createSession(String ID, List<String> content) {
         List<String> pages = paginate(content);
         PaginatorSession session = new PaginatorSession(pages);
-        sessions.put(serverId, session);
-        System.out.printf(systemMessagePrefix + "Created new session for server %s.\n", serverId);
+        sessions.put(ID, session);
+        System.out.printf(systemMessagePrefix + "Created new phrases session for server %s.\n", ID);
         return session;
     }
 
-    public PaginatorSession getSession(String serverID) {
-        PaginatorSession session = sessions.get(serverID);
+    @Override
+    public PaginatorSession getSession(String ID) {
+        PaginatorSession session = sessions.get(ID);
         if (session != null) {
             session.setLastAccessed();
         }
         return session;
     }
 
-    public boolean updateSession(String serverID, List<String> newContent) {
+    @Override
+    public boolean updateSession(String ID, List<String> newContent) {
         // Update only if there's an active session already
-        if (sessions.containsKey(serverID)) {
+        if (sessions.containsKey(ID)) {
             newContent = paginate(newContent);
-            PaginatorSession updatedSession = sessions.get(serverID);
+            PaginatorSession updatedSession = sessions.get(ID);
             updatedSession.setPages(newContent);
-            sessions.put(serverID, updatedSession);
+            sessions.put(ID, updatedSession);
             updatedSession.setLastAccessed();
             return true;
         }
         return false;
     }
 
-    private List<String> paginate(List<String> content) {
+    @Override
+    public void removeSession(String ID) {
+        sessions.remove(ID);
+    }
+
+    protected List<String> paginate(@NotNull List<String> content) {
         List<String> pages = new ArrayList<>();
         StringBuilder page = new StringBuilder();
-        for (int i = 0; i < content.size(); i++ ) {
+        for (int i = 0; i < content.size(); i++) {
             String formattedLine = String.format("%d. %s\n", i+1, content.get(i));
             if (page.length() + formattedLine.length() > MAX_PAGE_LENGTH) {
                 String formattedPage = String.format("```Here are the current custom phrases for this server: (Page %d)\n\n%s```", pages.size()+1, page);
@@ -79,13 +89,13 @@ public class PaginatorManager {
         return pages;
     }
 
-    // this will run at a rate defined by the cleanup interval static var.
-    private void cleanupSessions() {
+    // this will run at a rate defined by the cleanup interval static var
+    protected void cleanupSessions() {
         long currentTime = System.currentTimeMillis() / 1000;
         sessions.entrySet().removeIf(
         entry -> currentTime - entry.getValue().getLastAccessed() > SESSION_TIMEOUT_SEC
         );
-        System.out.printf(systemMessagePrefix + "Active pagination sessions: %d\n", sessions.size());
+        System.out.printf(systemMessagePrefix + "Active phrases pagination sessions: %d\n", sessions.size());
     }
 
     public void shutdown() {
