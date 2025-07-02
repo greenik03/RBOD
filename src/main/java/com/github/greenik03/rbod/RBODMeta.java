@@ -1,5 +1,6 @@
-package g03.discord.rbod;
+package com.github.greenik03.rbod;
 
+import com.github.greenik03.rbod.objects.ServerClass;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.Permission;

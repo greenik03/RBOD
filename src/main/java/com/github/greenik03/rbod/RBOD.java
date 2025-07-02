@@ -1,8 +1,9 @@
-package g03.discord.rbod;
+package com.github.greenik03.rbod;
 
-import g03.discord.rbod.paginator.NamesPaginatorManager;
-import g03.discord.rbod.paginator.PhrasesPaginatorManager;
-import g03.discord.rbod.paginator.PaginatorSession;
+import com.github.greenik03.rbod.objects.SettingsObj;
+import com.github.greenik03.rbod.paginator.NamesPaginatorManager;
+import com.github.greenik03.rbod.paginator.PhrasesPaginatorManager;
+import com.github.greenik03.rbod.paginator.PaginatorSession;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
@@ -24,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
-import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
+import static com.github.greenik03.rbod.RBODMeta.systemMessagePrefix;
 
 public class RBOD extends ListenerAdapter {
     // Initialize variables

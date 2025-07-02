@@ -3,7 +3,7 @@ plugins {
     id 'com.gradleup.shadow' version '8.3.6'
 }
 
-group = 'g03.discord'
+group = 'com.github.greenik03'
 version = '1.2-DEVELOPMENT'
 
 repositories {
@@ -33,7 +33,7 @@ shadowJar {
     }
     archiveClassifier.set('')
     manifest {
-        attributes 'Main-Class': 'g03.discord.rbod.RBODMeta'
+        attributes 'Main-Class': 'com.github.greenik03.rbod.RBODMeta'
     }
 }
 

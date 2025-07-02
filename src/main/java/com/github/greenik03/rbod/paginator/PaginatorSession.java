@@ -1,4 +1,4 @@
-package g03.discord.rbod.paginator;
+package com.github.greenik03.rbod.paginator;
 
 import java.util.List;
 

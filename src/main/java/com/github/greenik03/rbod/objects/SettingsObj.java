@@ -1,5 +1,4 @@
-package g03.discord.rbod;
-//TODO: Store in package "objects"
+package com.github.greenik03.rbod.objects;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -19,37 +18,21 @@ public class SettingsObj implements Serializable {
         ));
     }
 
-    public List<String> getNames() {
-        return names;
-    }
+    public List<String> getNames() { return names; }
 
-    public void addName(String name) {
-        names.add(name);
-    }
+    public void addName(String name) { names.add(name); }
 
-    public void removeName(String name) {
-        names.remove(name);
-    }
+    public void removeName(String name) { names.remove(name); }
 
-    public boolean containsName(String name) {
-        return names.contains(name);
-    }
+    public boolean containsName(String name) { return names.contains(name); }
 
-    public boolean isReactOnName() {
-        return reactOnName;
-    }
+    public boolean isReactOnName() { return reactOnName; }
 
-    public void setReactOnName(boolean reactOnName) {
-        this.reactOnName = reactOnName;
-    }
+    public void setReactOnName(boolean reactOnName) { this.reactOnName = reactOnName; }
 
-    public boolean isReactOnReply() {
-        return reactOnReply;
-    }
+    public boolean isReactOnReply() { return reactOnReply; }
 
-    public void setReactOnReply(boolean reactOnReply) {
-        this.reactOnReply = reactOnReply;
-    }
+    public void setReactOnReply(boolean reactOnReply) { this.reactOnReply = reactOnReply; }
 
     //TODO: change string format
     @Override

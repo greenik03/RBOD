@@ -1,10 +1,12 @@
-package g03.discord.rbod;
+package com.github.greenik03.rbod;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.greenik03.rbod.objects.ServerClass;
+import com.github.greenik03.rbod.objects.SettingsObj;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -12,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
+import static com.github.greenik03.rbod.RBODMeta.systemMessagePrefix;
 
 public class ServerDatabase {
     private static final File databaseFile = new File("databases/guilds.json"),

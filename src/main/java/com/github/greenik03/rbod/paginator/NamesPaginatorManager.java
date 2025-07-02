@@ -1,4 +1,4 @@
-package g03.discord.rbod.paginator;
+package com.github.greenik03.rbod.paginator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
+import static com.github.greenik03.rbod.RBODMeta.systemMessagePrefix;
 
 public class NamesPaginatorManager implements Paginator {
     private static final long CLEANUP_INTERVAL_SEC = 600;   // 10 minutes
