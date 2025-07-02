@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import static g03.discord.rbod.RBODMeta.systemMessagePrefix;
 
-public class PaginatorManager implements Paginator {
+public class PhrasesPaginatorManager implements Paginator {
     private static final long CLEANUP_INTERVAL_SEC = 600;   // 10 minutes
     private static final long SESSION_TIMEOUT_SEC = 1200;   // 20 minutes
     private static final int MAX_PAGE_LENGTH = 1900;        // slightly under Discord's 2000 char limit for extra info in messages
@@ -20,7 +20,7 @@ public class PaginatorManager implements Paginator {
     protected final Map<String, PaginatorSession> sessions = new ConcurrentHashMap<>();
     protected final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    public PaginatorManager() {
+    public PhrasesPaginatorManager() {
         cleanupExecutor.scheduleWithFixedDelay(
                 this::cleanupSessions,  // function to execute
                 1800,                   // delay before first execution (30 minutes)

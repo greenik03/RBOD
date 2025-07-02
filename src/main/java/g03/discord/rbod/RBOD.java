@@ -1,7 +1,7 @@
 package g03.discord.rbod;
 
 import g03.discord.rbod.paginator.NamesPaginatorManager;
-import g03.discord.rbod.paginator.PaginatorManager;
+import g03.discord.rbod.paginator.PhrasesPaginatorManager;
 import g03.discord.rbod.paginator.PaginatorSession;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -31,7 +31,7 @@ public class RBOD extends ListenerAdapter {
     static Random rng = new Random();
     static HashMap<String, List<String>> phrasesCache = new HashMap<>();
     static HashMap<String, SettingsObj> settingsCache = new HashMap<>();
-    PaginatorManager paginatorManager = new PaginatorManager();
+    PhrasesPaginatorManager phrasesPM = new PhrasesPaginatorManager();
     NamesPaginatorManager namesPM = new NamesPaginatorManager();
 
     public static void cacheInit(List<Guild> guilds) {
@@ -262,8 +262,8 @@ public class RBOD extends ListenerAdapter {
                         phrases.add(phrase);
                         ServerDatabase.setCustomPhrases(ID, phrases);
                         phrasesCache.put(ID, phrases);
-                        if (paginatorManager.getSession(ID) != null) {
-                            paginatorManager.updateSession(ID, phrases);
+                        if (phrasesPM.getSession(ID) != null) {
+                            phrasesPM.updateSession(ID, phrases);
                         }
                         event.reply("`Added the phrase to the list with index: " + phrases.size() + "`").queue();
                     }
@@ -280,8 +280,8 @@ public class RBOD extends ListenerAdapter {
                             phrases.remove(index);
                             ServerDatabase.setCustomPhrases(ID, phrases);
                             phrasesCache.put(ID, phrases);
-                            if (paginatorManager.getSession(ID) != null) {
-                                paginatorManager.updateSession(ID, phrases);
+                            if (phrasesPM.getSession(ID) != null) {
+                                phrasesPM.updateSession(ID, phrases);
                             }
                             event.reply("`Removed custom phrase " + (index + 1) + " from the list.`").queue();
                         }
@@ -293,9 +293,9 @@ public class RBOD extends ListenerAdapter {
                         }
                         // Initialization of the session variable is done like this in the event a user tries using the page number option
                         // (Autocomplete needs a session to provide options for the user, so it can create one if it doesn't exist)
-                        PaginatorSession session = paginatorManager.getSession(ID);
+                        PaginatorSession session = phrasesPM.getSession(ID);
                         if (session == null) {
-                            session = paginatorManager.createSession(ID, phrases);
+                            session = phrasesPM.createSession(ID, phrases);
                         }
                         if (session.getPageCount() == 1) {
                             event.reply(session.getCurrentPage()).queue();
@@ -309,9 +309,9 @@ public class RBOD extends ListenerAdapter {
                                 session.setPageNumber(page);
                             }
                             String buttonID = String.format("%s-%s", ID, event.getChannelId());
-                            Button btnNext = Button.secondary(buttonID + "-pm-next", "->")
+                            Button btnNext = Button.secondary(buttonID + "-ppm-next", "->")
                                     .withDisabled(session.getCurrentPageNumber() == session.getPageCount());
-                            Button btnPrev = Button.secondary(buttonID + "-pm-prev", "<-")
+                            Button btnPrev = Button.secondary(buttonID + "-ppm-prev", "<-")
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
                             event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
@@ -430,9 +430,9 @@ public class RBOD extends ListenerAdapter {
             if (event.isFromGuild()) {
                 String ID = Objects.requireNonNull(event.getGuild()).getId();
                 if (phrasesCache.get(ID) != null && !phrasesCache.get(ID).isEmpty()) {
-                    PaginatorSession session = paginatorManager.getSession(ID);
+                    PaginatorSession session = phrasesPM.getSession(ID);
                     if (session == null) {
-                        session = paginatorManager.createSession(ID, phrasesCache.get(ID));
+                        session = phrasesPM.createSession(ID, phrasesCache.get(ID));
                     }
                     List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
                             .limit(Math.min(session.getPageCount(), 25))
@@ -475,8 +475,8 @@ public class RBOD extends ListenerAdapter {
         String serverID = Objects.requireNonNull(event.getGuild()).getId(),
             channelID = event.getChannelId();
         String buttonID = String.format("%s-%s", serverID, channelID);
-        if (event.getComponentId().contains("pm")) {
-            PaginatorSession session = paginatorManager.getSession(serverID);
+        if (event.getComponentId().contains("ppm")) {
+            PaginatorSession session = phrasesPM.getSession(serverID);
             // sessions are null if not accessed after 20 minutes and cleanup deleted them
             if (session == null) {
                 event.editMessage("`Session expired! Use '/phrases list' for a new one.`")
@@ -484,20 +484,20 @@ public class RBOD extends ListenerAdapter {
                         .queue();
                 return;
             }
-            if (event.getComponentId().equals(buttonID + "-pm-next")) {
+            if (event.getComponentId().equals(buttonID + "-ppm-next")) {
                 if (session.nextPage()) {
                     Button btnNext = (session.getCurrentPageNumber() == session.getPageCount())?
                             event.getButton().asDisabled() : event.getButton().asEnabled();
-                    Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-pm-prev", "<-");
+                    Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-ppm-prev", "<-");
                     btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
                     event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
                 }
             }
-            else if (event.getComponentId().equals(buttonID + "-pm-prev")) {
+            else if (event.getComponentId().equals(buttonID + "-ppm-prev")) {
                 if (session.previousPage()) {
                     Button btnPrev = (session.getCurrentPageNumber() == 1)?
                             event.getButton().asDisabled() : event.getButton().asEnabled();
-                    Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-pm-next", "->");
+                    Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-ppm-next", "->");
                     btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
                     event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
                 }
@@ -630,7 +630,7 @@ public class RBOD extends ListenerAdapter {
     @Override
     public void onShutdown(@NotNull ShutdownEvent event) {
         System.out.println(systemMessagePrefix + "Bot is shutting down...");
-        paginatorManager.shutdown();
+        phrasesPM.shutdown();
         namesPM.shutdown();
     }
 
@@ -673,7 +673,7 @@ public class RBOD extends ListenerAdapter {
         }
         phrasesCache.remove(guild.getId());
         settingsCache.remove(guild.getId());
-        paginatorManager.removeSession(guild.getId());
+        phrasesPM.removeSession(guild.getId());
         namesPM.removeSession(guild.getId());
         System.out.println(systemMessagePrefix + "Left guild " + guild.getName() + " (" + guild.getId() + ").");
     }
