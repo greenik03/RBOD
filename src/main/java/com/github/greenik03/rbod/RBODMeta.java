@@ -19,7 +19,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Scanner;
@@ -27,7 +26,7 @@ import java.util.regex.Pattern;
 
 public class RBODMeta {
     static File phrases = new File("assets/phrases.txt"),
-            discordToken = new File("assets/token.txt");
+            discordToken = new File("assets/token.secret");
     static EnumSet<GatewayIntent> intents = EnumSet.of(
             GatewayIntent.GUILD_MESSAGES,
             GatewayIntent.DIRECT_MESSAGES,
@@ -39,13 +38,12 @@ public class RBODMeta {
     public static void main(String[] args) {
         // Prevent the bot from starting until it has all the data it needs
         String token = readTokenFromFile();
-        if (token == null) {
+        if (token == null || token.equals("Placeholder text")) {
             System.out.println(systemMessagePrefix + "No token found in "+ discordToken.getPath() +". Please add a token and restart the bot.");
             return;
         }
-        if (readPhrasesFromFile().isEmpty()) {
-            System.out.println(systemMessagePrefix + phrases.getPath() + " has just been created with placeholder text. Restart the bot after adding phrases to it.");
-            return;
+        if (readPhrasesFromFile().get(0).equals("Placeholder text")) {
+            System.out.println(systemMessagePrefix + phrases.getPath() + " has just been created with placeholder text. Shut down the bot and edit the file as needed.");
         }
 
         JDA jda = JDABuilder.createLight(token, intents)
@@ -206,7 +204,7 @@ public class RBODMeta {
         else {
             createAssetsFile(phrases);
         }
-        return new ArrayList<>();
+        return List.of("Placeholder text");
     }
 
     // Read token from assets/token.txt
