@@ -6,11 +6,12 @@ import java.util.List;
 
 public class SettingsObj implements Serializable {
     List<String> names;
-    boolean reactOnName, reactOnReply; //TODO: add field for ephemeral messages (and then edit the database)
+    boolean reactOnName, reactOnReply, ephemeralUpdates;
 
     public SettingsObj() {
         reactOnName = false;
         reactOnReply = false;
+        ephemeralUpdates = false;
         this.names = new ArrayList<>(List.of(
                 "react bot",
                 "reactbot",
@@ -33,6 +34,10 @@ public class SettingsObj implements Serializable {
     public boolean isReactOnReply() { return reactOnReply; }
 
     public void setReactOnReply(boolean reactOnReply) { this.reactOnReply = reactOnReply; }
+
+    public boolean updatesEphemeral() { return ephemeralUpdates; }
+
+    public void setEphemeralUpdates(boolean ephemeralUpdates) { this.ephemeralUpdates = ephemeralUpdates; }
 
     //TODO: change string format
     @Override

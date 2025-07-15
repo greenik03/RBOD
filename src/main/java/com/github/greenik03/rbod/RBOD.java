@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -130,7 +131,7 @@ public class RBOD extends ListenerAdapter {
             event.reply("`Settings not found or are corrupted. New settings have been made. Run the command again.`").queue();
             return;
         }
-        //TODO: boolean ephemeral = settings.getEphemeral() (default: false);
+        boolean ephemeral = settings.updatesEphemeral();
         String[] command = event.getFullCommandName()
                 .toLowerCase()
                 .trim()
@@ -144,20 +145,31 @@ public class RBOD extends ListenerAdapter {
                         settings.setReactOnName(reactOnName);
                         ServerDatabase.setSettings(ID, settings);
                         settingsCache.put(ID, settings);
-                        event.reply("`Name reactions are " + (reactOnName ? "on" : "off") + "!`").queue();
+                        event.reply("`Name reactions are " + (reactOnName ? "on" : "off") + "!`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                     } else if (command[1].equalsIgnoreCase("on-reply-react")) {
                         boolean reactOnReply = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
                         settings.setReactOnReply(reactOnReply);
                         ServerDatabase.setSettings(ID, settings);
                         settingsCache.put(ID, settings);
-                        event.reply("`Reply reactions are " + (reactOnReply ? "on" : "off") + "!`").queue();
+                        event.reply("`Reply reactions are " + (reactOnReply ? "on" : "off") + "!`")
+                                .setEphemeral(ephemeral)
+                                .queue();
+                    } else if (command[1].equalsIgnoreCase("ephemeral-updates")) {
+                        boolean isEphemeral = Objects.requireNonNull(event.getOption("option")).getAsBoolean();
+                        settings.setEphemeralUpdates(isEphemeral);
+                        ServerDatabase.setSettings(ID, settings);
+                        settingsCache.put(ID, settings);
+                        event.reply("`Ephemeral updates are" + (isEphemeral ? "on" : "off") + "!`")
+                                .setEphemeral(isEphemeral)
+                                .queue();
                     }
-                    //TODO: elif (subcommand == "secretUpdates" (name is WIP))
                 }
                 catch (IOException e) {
                     event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
-                            .setEphemeral(true)
-                            .queue();
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
                 break;
 
@@ -169,11 +181,15 @@ public class RBOD extends ListenerAdapter {
                                 .trim()
                                 .toLowerCase();
                         if (name.isBlank()) {
-                            event.reply("That's a nothing burger... `(Name cannot be blank)`").queue();
+                            event.reply("That's a nothing burger... `(Name cannot be blank)`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         if (settings.containsName(name)) {
-                            event.reply("`That name is already in the list.`").queue();
+                            event.reply("`That name is already in the list.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                         } else {
                             settings.addName(name);
                             ServerDatabase.setSettings(ID, settings);
@@ -181,7 +197,9 @@ public class RBOD extends ListenerAdapter {
                             if (namesPM.getSession(ID) != null) {
                                 namesPM.updateSession(ID, settings.getNames());
                             }
-                            event.reply("`Added '" + name + "' to the name list. Wowza!`").queue();
+                            event.reply("`Added '" + name + "' to the name list. Wowza!`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                     } else if (command[1].equalsIgnoreCase("remove")) {
                         String name = Objects.requireNonNull(event.getOption("name"))
@@ -189,11 +207,15 @@ public class RBOD extends ListenerAdapter {
                                 .trim()
                                 .toLowerCase();
                         if (name.isBlank()) {
-                            event.reply("That's a nothing burger... `(Name cannot be blank)`").queue();
+                            event.reply("That's a nothing burger... `(Name cannot be blank)`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         if (!settings.containsName(name)) {
-                            event.reply("`That name is not in the list.`").queue();
+                            event.reply("`That name is not in the list.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                         } else {
                             settings.removeName(name);
                             ServerDatabase.setSettings(ID, settings);
@@ -201,12 +223,16 @@ public class RBOD extends ListenerAdapter {
                             if (namesPM.getSession(ID) != null) {
                                 namesPM.updateSession(ID, settings.getNames());
                             }
-                            event.reply("`Removed '" + name + "' from the name list. Fiddlesticks...`").queue();
+                            event.reply("`Removed '" + name + "' from the name list. Fiddlesticks...`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                     } else if (command[1].equalsIgnoreCase("list")) {
                         List<String> names = settings.getNames();
                         if (names == null || names.isEmpty()) {
-                            event.reply("`There are no names for the bot in this server.`").queue();
+                            event.reply("`There are no names for the bot in this server.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         PaginatorSession session = namesPM.getSession(ID);
@@ -214,7 +240,9 @@ public class RBOD extends ListenerAdapter {
                             session = namesPM.createSession(ID, names);
                         }
                         if (session.getPageCount() == 1) {
-                            event.reply(session.getCurrentPage()).queue();
+                            event.reply(session.getCurrentPage())
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                         else {
                             if (event.getOption("page") != null) {
@@ -230,14 +258,17 @@ public class RBOD extends ListenerAdapter {
                             Button btnPrev = Button.secondary(buttonID + "-npm-prev", "<-")
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
-                            event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
+                            event.reply(session.getCurrentPage())
+                                .addActionRow(btnPrev, btnNext)
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                     }
                 }
                 catch (IOException e) {
                     event.reply("Something went wrong while setting the bot's response activations. \n" + e.getMessage())
-                            .setEphemeral(true)
-                            .queue();
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
             break;
 
@@ -253,11 +284,15 @@ public class RBOD extends ListenerAdapter {
                             phrases = new ArrayList<>();
                         }
                         if (phrases.contains(phrase)) {
-                            event.reply("`That phrase is already in the list.`").queue();
+                            event.reply("`That phrase is already in the list.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         if (phrase.length() > 1900) {
-                            event.reply("`That phrase is too long. Max length is 1900 characters.`").queue();
+                            event.reply("`That phrase is too long. Max length is 1900 characters.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         phrases.add(phrase);
@@ -266,16 +301,22 @@ public class RBOD extends ListenerAdapter {
                         if (phrasesPM.getSession(ID) != null) {
                             phrasesPM.updateSession(ID, phrases);
                         }
-                        event.reply("`Added the phrase to the list with index: " + phrases.size() + "`").queue();
+                        event.reply("`Added the phrase to the list with index: " + phrases.size() + "`")
+                            .setEphemeral(ephemeral)
+                            .queue();
                     }
                     else if (command[1].equalsIgnoreCase("remove")) {
                         int index = Objects.requireNonNull(event.getOption("index")).getAsInt() - 1;
                         if (phrases == null || phrases.isEmpty()) {
-                            event.reply("`There are no custom phrases for this server.`").queue();
+                            event.reply("`There are no custom phrases for this server.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         if (index < 0 || index >= phrases.size()) {
-                            event.reply("`That index is out of bounds.`").queue();
+                            event.reply("`That index is out of bounds.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                         else {
                             phrases.remove(index);
@@ -284,12 +325,16 @@ public class RBOD extends ListenerAdapter {
                             if (phrasesPM.getSession(ID) != null) {
                                 phrasesPM.updateSession(ID, phrases);
                             }
-                            event.reply("`Removed custom phrase " + (index + 1) + " from the list.`").queue();
+                            event.reply("`Removed custom phrase " + (index + 1) + " from the list.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                     }
                     else if (command[1].equalsIgnoreCase("list")) {
                         if (phrases == null || phrases.isEmpty()) {
-                            event.reply("`There are no custom phrases for this server.`").queue();
+                            event.reply("`There are no custom phrases for this server.`")
+                                .setEphemeral(ephemeral)
+                                .queue();
                             return;
                         }
                         // Initialization of the session variable is done like this in the event a user tries using the page number option
@@ -299,7 +344,9 @@ public class RBOD extends ListenerAdapter {
                             session = phrasesPM.createSession(ID, phrases);
                         }
                         if (session.getPageCount() == 1) {
-                            event.reply(session.getCurrentPage()).queue();
+                            event.reply(session.getCurrentPage())
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                         else {
                             if (event.getOption("page") != null) {
@@ -315,14 +362,17 @@ public class RBOD extends ListenerAdapter {
                             Button btnPrev = Button.secondary(buttonID + "-ppm-prev", "<-")
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
-                            event.reply(session.getCurrentPage()).addActionRow(btnPrev, btnNext).queue();
+                            event.reply(session.getCurrentPage())
+                                .addActionRow(btnPrev, btnNext)
+                                .setEphemeral(ephemeral)
+                                .queue();
                         }
                     }
                 }
                 catch (IOException e) {
                     event.reply("Something went wrong while setting the server's custom phrases. \n" + e.getMessage())
-                            .setEphemeral(true)
-                            .queue();
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
             break;
 
@@ -339,7 +389,9 @@ public class RBOD extends ListenerAdapter {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    event.reply("`Settings and phrases reset for this server.`").queue();
+                    event.reply("`Settings and phrases reset for this server.`")
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
                 else if (option.equalsIgnoreCase("settings")) {
                     try {
@@ -349,7 +401,9 @@ public class RBOD extends ListenerAdapter {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    event.reply("`Settings reset for this server.`").queue();
+                    event.reply("`Settings reset for this server.`")
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
                 else if (option.equalsIgnoreCase("phrases")) {
                     try {
@@ -359,10 +413,14 @@ public class RBOD extends ListenerAdapter {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    event.reply("`Phrases reset for this server.`").queue();
+                    event.reply("`Phrases reset for this server.`")
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
                 else {
-                    event.reply("`Invalid option. Use 'all' (or just '/reset') for settings and phrases, 'settings', or 'phrases'.`").queue();
+                    event.reply("`Invalid option. Use 'all' (or just '/reset') for settings and phrases, 'settings', or 'phrases'.`")
+                        .setEphemeral(ephemeral)
+                        .queue();
                 }
                 break;
 
@@ -401,12 +459,20 @@ public class RBOD extends ListenerAdapter {
                     
                     /help - This one.
                     ```
-                    """).queue();
+                    """)
+                        .setEphemeral(ephemeral)
+                        .queue();
+            break;
+
+            case "view-settings":
+                //TODO
             break;
 
             // This will never appear when using the bot, added in just in case
             default:
-                event.reply("`Unknown command. Type '/help' for a list of commands.`").queue();
+                event.reply("`Unknown command. Type '/help' for a list of commands.`")
+                    .setEphemeral(ephemeral)
+                    .queue();
             break;
         }
     }

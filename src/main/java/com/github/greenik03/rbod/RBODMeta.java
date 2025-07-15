@@ -59,7 +59,9 @@ public class RBODMeta {
                                 new SubcommandData("on-name-react", "Toggles the bot's reaction on name mentions.")
                                         .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
                                 new SubcommandData("on-reply-react", "Toggles the bot's reaction on replies.")
-                                        .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true)
+                                        .addOption(OptionType.BOOLEAN, "option", "Whether to turn the reaction on or off.", true),
+                                new SubcommandData("ephemeral-updates", "Toggles the visibility of the bot's update messages.")
+                                        .addOption(OptionType.BOOLEAN, "option", "Whether to turn the setting on or off.", true)
                         )
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
@@ -90,6 +92,9 @@ public class RBODMeta {
                                 new SubcommandData("list", "Lists all the phrases for this server, with indexes, divided into pages if necessary.")
                                         .addOption(OptionType.INTEGER, "page", "The page to show first. (Autocomplete maxes out at 25 due to Discord's limitations)", false, true)
                         )
+                        .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE)),
+                Commands.slash("view-settings", "View this server's settings.")
                         .setIntegrationTypes(IntegrationType.GUILD_INSTALL)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
         ).queue();
