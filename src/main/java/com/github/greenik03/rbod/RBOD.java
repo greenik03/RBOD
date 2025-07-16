@@ -9,12 +9,14 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.MessageContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
@@ -618,11 +620,25 @@ public class RBOD extends ListenerAdapter {
     }
 
     @Override
+    public void onMessageContextInteraction(@NotNull MessageContextInteractionEvent event) {
+        if (event.getName().equalsIgnoreCase("react to this")) {
+            String reply = event.isFromGuild()? getPhraseFromCache(Objects.requireNonNull(event.getGuild()).getId()) : getPhraseFromCache(null);
+            event.reply("Ooh, something to react to!")
+                    .setEphemeral(true)
+                    .queue();
+            event.getTarget()
+                    .reply(reply)
+                    .queue();
+//            return;
+        }
+    }
+
+    @Override
     public void onMessageReceived(@NotNull MessageReceivedEvent event) {
         SelfUser self = event.getJDA().getSelfUser();
         // Do not reply to self
         if (event.getAuthor().equals(self)) {
-            if (RBODMeta.messageContainsExactString(event.getMessage().getContentRaw(), "edit:")/*TODO: && message is not of type Context Command*/) {
+            if (RBODMeta.messageContainsExactString(event.getMessage().getContentRaw(), "edit:") && !event.getMessage().getType().equals(MessageType.CONTEXT_COMMAND)) {
                // this works for some reason
                 String message = event.getMessage().getContentRaw();
                 event.getMessage().editMessage(message).queue();
@@ -683,7 +699,7 @@ public class RBOD extends ListenerAdapter {
                 event.getMessage()
                         .reply(reply)
                         .queue();
-                 return;
+                return;
             }
         }
 
