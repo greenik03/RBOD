@@ -1,10 +1,11 @@
 package com.github.greenik03.rbod.objects;
 
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class SettingsObj implements Serializable {
+public class SettingsObj {
     List<String> names;
     boolean reactOnName, reactOnReply, ephemeralUpdates;
 
@@ -35,7 +36,8 @@ public class SettingsObj implements Serializable {
 
     public void setReactOnReply(boolean reactOnReply) { this.reactOnReply = reactOnReply; }
 
-    public boolean updatesEphemeral() { return ephemeralUpdates; }
+    @JsonProperty("ephemeralUpdates")
+    public boolean areUpdatesEphemeral() { return ephemeralUpdates; }
 
     public void setEphemeralUpdates(boolean ephemeralUpdates) { this.ephemeralUpdates = ephemeralUpdates; }
 

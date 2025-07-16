@@ -21,7 +21,6 @@ import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -131,7 +130,7 @@ public class RBOD extends ListenerAdapter {
             event.reply("`Settings not found or are corrupted. New settings have been made. Run the command again.`").queue();
             return;
         }
-        boolean ephemeral = settings.updatesEphemeral();
+        boolean ephemeral = settings.areUpdatesEphemeral();
         String[] command = event.getFullCommandName()
                 .toLowerCase()
                 .trim()
@@ -161,7 +160,7 @@ public class RBOD extends ListenerAdapter {
                         settings.setEphemeralUpdates(isEphemeral);
                         ServerDatabase.setSettings(ID, settings);
                         settingsCache.put(ID, settings);
-                        event.reply("`Ephemeral updates are" + (isEphemeral ? "on" : "off") + "!`")
+                        event.reply("`Ephemeral updates are " + (isEphemeral ? "on" : "off") + "!`")
                                 .setEphemeral(isEphemeral)
                                 .queue();
                     }
