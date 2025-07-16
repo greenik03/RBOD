@@ -70,7 +70,7 @@ public class NamesPaginatorManager implements Paginator {
         List<String> pages = paginate(content);
         PaginatorSession session = new PaginatorSession(pages);
         sessions.put(ID, session);
-        System.out.printf(systemMessagePrefix + "Created new phrases session for server %s.\n", ID);
+        System.out.printf(systemMessagePrefix + "Created new names session for server %s.\n", ID);
         return session;
     }
 

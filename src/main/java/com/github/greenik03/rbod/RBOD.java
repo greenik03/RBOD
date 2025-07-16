@@ -518,6 +518,7 @@ public class RBOD extends ListenerAdapter {
             }
             return;
         }
+        // TODO: include check for names option and optimize private channel check for all conditions
         if (event.getName().equalsIgnoreCase("names") && event.getFocusedOption().getName().equalsIgnoreCase("page")) {
             if (event.isFromGuild()) {
                 String ID = Objects.requireNonNull(event.getGuild()).getId();
