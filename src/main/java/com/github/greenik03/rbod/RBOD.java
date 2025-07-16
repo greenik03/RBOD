@@ -23,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -31,8 +32,8 @@ import static com.github.greenik03.rbod.RBODMeta.systemMessagePrefix;
 public class RBOD extends ListenerAdapter {
     // Initialize variables
     static Random rng = new Random();
-    static HashMap<String, List<String>> phrasesCache = new HashMap<>();
-    static HashMap<String, SettingsObj> settingsCache = new HashMap<>();
+    static ConcurrentHashMap<String, List<String>> phrasesCache = new ConcurrentHashMap<>();
+    static ConcurrentHashMap<String, SettingsObj> settingsCache = new ConcurrentHashMap<>();
     PhrasesPaginatorManager phrasesPM = new PhrasesPaginatorManager();
     NamesPaginatorManager namesPM = new NamesPaginatorManager();
 
@@ -43,7 +44,10 @@ public class RBOD extends ListenerAdapter {
         phrasesCache.put("global", RBODMeta.readPhrasesFromFile());
         guilds.forEach(guild -> {
             try {
-                phrasesCache.put(guild.getId(), ServerDatabase.getCustomPhrases(guild.getId()));
+                List<String> phrases = ServerDatabase.getCustomPhrases(guild.getId());
+                if (phrases != null && !phrases.isEmpty()) {
+                    phrasesCache.put(guild.getId(), phrases);
+                }
                 SettingsObj settings = ServerDatabase.getSettings(guild.getId());
                 if (settings != null) {
                     settingsCache.put(guild.getId(), settings);
@@ -95,9 +99,9 @@ public class RBOD extends ListenerAdapter {
                     System.err.println(e.getMessage());
                     return null;
                 }
-                phrasesCache.put(ID, customPhrases);
             }
             if (customPhrases != null && !customPhrases.isEmpty()) {
+                phrasesCache.put(ID, customPhrases);
                 phrases.addAll(customPhrases);
             }
         }
