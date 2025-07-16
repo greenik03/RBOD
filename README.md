@@ -9,7 +9,9 @@ Original ReactBot program developed by [Cuyoya](https://beacons.ai/cuyoya), El_M
 ## How does it work?
 RBOD is to be used in servers, mainly. When a user @mentions the bot, it'll reply to the message with one of the phrases included in phrases.txt, located in the "assets" folder.
 The user can also directly message the bot to interact with it, but they cannot use the bot's commands this way. \
-Interaction by @mention is always enabled, but there are optional triggers that can be enabled for a server.
+Interaction by @mention is always enabled, but there are optional triggers that can be enabled for a server. \
+The user can also open the context menu (right-click) on a message and tell the bot to react to it.
+
 Here are all the commands for the bot:
 - `/toggle on-reply-react [true/false]` - toggles the option for the bot to reply to messages from users where they reply to the bot's messages. **Default: `false`**
 - `/toggle on-name-react [true/false]` - toggles the option for the bot to reply to messages from users where they refer to the bot by name, without a @mention. While there are names the bot responds to by default when joining a server, they can be changed with the `/names` commands. **Default: `false`**
