@@ -626,8 +626,9 @@ public class RBOD extends ListenerAdapter {
     public void onMessageContextInteraction(@NotNull MessageContextInteractionEvent event) {
         if (event.getName().equalsIgnoreCase("react to this")) {
             String reply = event.isFromGuild()? getPhraseFromCache(Objects.requireNonNull(event.getGuild()).getId()) : getPhraseFromCache(null);
+            boolean ephemeral = !event.isFromGuild() || getSettingsFromCache(Objects.requireNonNull(event.getGuild()).getId()).areUpdatesEphemeral();
             event.reply("Ooh, something to react to!")
-                    .setEphemeral(true)
+                    .setEphemeral(ephemeral)
                     .queue();
             event.getTarget()
                     .reply(reply)
