@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.greenik03.rbod.objects.ServerClass;
 import com.github.greenik03.rbod.objects.SettingsObj;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.ISnowflake;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -52,7 +54,9 @@ public class ServerDatabase {
     // Create database file if none exists, then configure ObjectMapper
     public static void init() {
         databaseLock.writeLock().lock();
+        databaseLock.readLock().lock();
         customPhrasesLock.writeLock().lock();
+        customPhrasesLock.readLock().lock();
         try {
             createDatabaseFile(databaseFile);
             createDatabaseFile(customPhrasesFile);
@@ -77,7 +81,30 @@ public class ServerDatabase {
         finally {
             databaseLock.writeLock().unlock();
             customPhrasesLock.writeLock().unlock();
+            databaseLock.readLock().unlock();
+            customPhrasesLock.readLock().unlock();
         }
+    }
+
+    // Remove servers the bot is no longer in from the databases
+    public static void cleanupDatabaseFiles(List<Guild> guilds) {
+        List<String> actualServers = guilds.stream()
+                .map(ISnowflake::getId)
+                .toList();
+        List<String> databaseServers = getServers().stream()
+                .map(ServerClass::getServerId)
+                .toList();
+
+        databaseServers.forEach(id -> {
+            if (!actualServers.contains(id)) {
+                try {
+                    removeServer(id);
+                    removeServerFromCustomPhrases(id);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     public static List<ServerClass> getServers() {

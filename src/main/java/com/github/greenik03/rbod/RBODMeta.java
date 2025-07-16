@@ -131,6 +131,7 @@ public class RBODMeta {
                 }
             }
         }
+        ServerDatabase.cleanupDatabaseFiles(guilds);
         System.out.printf("%sBot is now active in %d servers/guilds.\n", systemMessagePrefix, guilds.size());
         System.out.printf("%sSettings database: %d added, %d unchanged\n", systemMessagePrefix, settingsAdded, guilds.size() - settingsAdded);
         System.out.printf("%sCustom phrases database: %d added, %d unchanged\n", systemMessagePrefix, phrasesAdded, guilds.size() - phrasesAdded);

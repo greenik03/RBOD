@@ -9,6 +9,10 @@ public class ServerClass {
         this.settings = settings;
     }
 
+    public String getServerId() {
+        return serverId;
+    }
+
     @Override
     public String toString() {
         return String.format("%s:\n%s\n%s", serverId, settings.getNames(),  settings);

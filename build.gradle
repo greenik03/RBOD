@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.github.greenik03'
-version = '1.2-DEVELOPMENT'
+version = '1.2'
 
 repositories {
     mavenCentral()
