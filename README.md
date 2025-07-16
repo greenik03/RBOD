@@ -72,14 +72,15 @@ The slash commands, by default, are enabled for members with `Manage Messages` p
    assemble.dependsOn shadowJar
     ```
 2. Run the build task in Gradle to create a .jar file. 
-3. Make sure your OS has JRE, at least version 20. If you're not sure what version you have, open a terminal/CMD and run `java -version`. If you don't have version 20 or newer, [download it from here](https://adoptium.net/temurin/releases/).
+3. Make sure your OS has JRE, at least version 20. If you're not sure what version you have, open a terminal/CMD and run ```java -version```. If you don't have version 20 or newer, [download it from here](https://adoptium.net/temurin/releases/).
    - If you're running the .jar off of the IDE, then skip this step.
 4. Locate the newly created .jar in build/libs. It should be named as 'rbod-*[version]*.jar'.
    - If you're not running the .jar using the IDE, you can take the .jar file and place it in a dedicated folder wherever you like.
-5. Create an "assets" folder if there isn't one and create the necessary files in the folder. ([check guide.md for more info](assets/guide.md))
-6. Create a folder called "databases" and leave it empty.
+5. Run the bot once to let it create the folders and files it needs.
+   - Use a terminal or CMD for this. You can run the .jar with ```java -jar rbod-[version].jar```.
+6. Open the newly created "assets" folder and edit the files with the appropriate data. Create missing files if necessary. ([read more here](assets/guide.md))
 
-Once that's all done, the bot is ready to go! Open a terminal/CMD in the same directory as the .jar and run `java -jar rbod-[version].jar`.
+Once that's all done, the bot is ready to go! If `phrases.txt` wasn't created after running the bot, it'll create the file with placeholder text. Shut down the bot (through the terminal) if you want to make changes to the file.
 
 ## Contribution
 If you find any problems with the program, open an issue and let me know about it. \
