@@ -70,7 +70,7 @@ public class RBODMeta {
                                 new SubcommandData("add", "Adds a name to the list of names the bot reacts to.")
                                         .addOption(OptionType.STRING, "name", "The name the bot will react to.", true),
                                 new SubcommandData("remove", "Removes a name from the list of names the bot reacts to.")
-                                        .addOption(OptionType.STRING, "name", "The name to remove from the list.", true),
+                                        .addOption(OptionType.STRING, "name", "The name to remove from the list.", true, true),
                                 new SubcommandData("list", "Lists all the names the bot reacts to.")
                                         .addOption(OptionType.INTEGER, "page", "The page to show first. (Autocomplete maxes out at 25 due to Discord's limitations)", false, true)
                         )

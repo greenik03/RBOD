@@ -483,46 +483,50 @@ public class RBOD extends ListenerAdapter {
 
     @Override
     public void onCommandAutoCompleteInteraction(@NotNull CommandAutoCompleteInteractionEvent event) {
+        if (!event.isFromGuild()) {
+            event.replyChoices().queue();
+            return;
+        }
+        String ID = Objects.requireNonNull(event.getGuild()).getId();
         if (event.getName().equalsIgnoreCase("reset") && event.getFocusedOption().getName().equalsIgnoreCase("data")) {
-            if (event.isFromGuild()) {
-                String[] options = new String[]{"all", "settings", "phrases"};
-                List<Command.Choice> choices = Stream.of(options)
-                        .filter(word -> word.startsWith(event.getFocusedOption().getValue()))
-                        .map(word -> new Command.Choice(word, word))
-                        .toList();
-                event.replyChoices(choices).queue();
-            }
-            else {
-                event.replyChoices().queue();
-            }
+            String[] options = new String[]{"all", "settings", "phrases"};
+            List<Command.Choice> choices = Stream.of(options)
+                    .filter(word -> word.startsWith(event.getFocusedOption().getValue()))
+                    .map(word -> new Command.Choice(word, word))
+                    .toList();
+            event.replyChoices(choices).queue();
             return;
         }
         if (event.getName().equalsIgnoreCase("phrases") && event.getFocusedOption().getName().equalsIgnoreCase("page")) {
-            if (event.isFromGuild()) {
-                String ID = Objects.requireNonNull(event.getGuild()).getId();
-                if (phrasesCache.get(ID) != null && !phrasesCache.get(ID).isEmpty()) {
-                    PaginatorSession session = phrasesPM.getSession(ID);
-                    if (session == null) {
-                        session = phrasesPM.createSession(ID, phrasesCache.get(ID));
-                    }
-                    List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
-                            .limit(Math.min(session.getPageCount(), 25))
-                            .filter(number -> String.valueOf(number).startsWith(event.getFocusedOption().getValue()))
-                            .map(i -> new Command.Choice(String.valueOf(i), i))
-                            .toList();
-                    event.replyChoices(choices).queue();
+            if (phrasesCache.get(ID) != null && !phrasesCache.get(ID).isEmpty()) {
+                PaginatorSession session = phrasesPM.getSession(ID);
+                if (session == null) {
+                    session = phrasesPM.createSession(ID, phrasesCache.get(ID));
                 }
-            }
-            else {
-                event.replyChoices().queue();
+                List<Command.Choice> choices = Stream.iterate(1, i -> i + 1)
+                        .limit(Math.min(session.getPageCount(), 25))
+                        .filter(number -> String.valueOf(number).startsWith(event.getFocusedOption().getValue()))
+                        .map(i -> new Command.Choice(String.valueOf(i), i))
+                        .toList();
+                event.replyChoices(choices).queue();
             }
             return;
         }
-        // TODO: include check for names option and optimize private channel check for all conditions
-        if (event.getName().equalsIgnoreCase("names") && event.getFocusedOption().getName().equalsIgnoreCase("page")) {
-            if (event.isFromGuild()) {
-                String ID = Objects.requireNonNull(event.getGuild()).getId();
-                List<String> names = getSettingsFromCache(ID).getNames();
+        if (event.getName().equalsIgnoreCase("names")) {
+            String subcommand = event.getSubcommandName();
+            List<String> names = getSettingsFromCache(ID).getNames();
+            if (subcommand != null && subcommand.equalsIgnoreCase("remove") && event.getFocusedOption().getName().equalsIgnoreCase("name")) {
+                if (names != null && !names.isEmpty()) {
+                    List<Command.Choice> choices = names.stream()
+                            .filter(name -> name.startsWith(event.getFocusedOption().getValue()))
+                            .limit(Math.min(25, names.size()))
+                            .map(name -> new Command.Choice(name, name))
+                            .toList();
+                    event.replyChoices(choices).queue();
+                }
+                return;
+            }
+            if (event.getFocusedOption().getName().equalsIgnoreCase("page")) {
                 if (names != null && !names.isEmpty()) {
                     PaginatorSession session = namesPM.getSession(ID);
                     if (session == null) {
@@ -535,9 +539,7 @@ public class RBOD extends ListenerAdapter {
                             .toList();
                     event.replyChoices(choices).queue();
                 }
-            }
-            else {
-                event.replyChoices().queue();
+//                return;
             }
         }
     }
