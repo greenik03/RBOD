@@ -9,10 +9,11 @@ Original ReactBot program developed by [Cuyoya](https://beacons.ai/cuyoya), El_M
 ## How does it work?
 RBOD is to be used in servers, mainly. When a user @mentions the bot, it'll reply to the message with one of the phrases included in phrases.txt, located in the "assets" folder.
 The user can also directly message the bot to interact with it, but they cannot use the bot's commands this way. \
-Interaction by @mention is always enabled, but there are optional triggers that can be enabled for a server:
+Interaction by @mention is always enabled, but there are optional triggers that can be enabled for a server.
+Here are all the commands for the bot:
 - `/toggle on-reply-react [true/false]` - toggles the option for the bot to reply to messages from users where they reply to the bot's messages. **Default: `false`**
 - `/toggle on-name-react [true/false]` - toggles the option for the bot to reply to messages from users where they refer to the bot by name, without a @mention. While there are names the bot responds to by default when joining a server, they can be changed with the `/names` commands. **Default: `false`**
-- `/toggle ephemeral-updates [true/false]` - toggles the option for the bot to make update messages ephemeral, i.e. only make update messages visible to the user who ran the command. **Default: `false`**
+- `/toggle ephemeral-updates [true/false]` - toggles the option for the bot to make update messages ephemeral, i.e. only visible to the user running the commands. **Default: `false`**
 - `/names list [page]` - Lists the names the bot can currently respond to. [page] will be set to 1 if not provided, or the given page number doesn't exist. By default, i.e. when the bot first joins a server, this list contains `react bot, reactbot, rbod`.
 - `/names add [name]` - Adds [name] the user inputs to the list of names. (case-insensitive)
 - `/names remove [name]` - Removes [name] the user inputs from the list of names. (case-insensitive)
