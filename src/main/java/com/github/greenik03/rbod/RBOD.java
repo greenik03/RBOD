@@ -424,14 +424,15 @@ public class RBOD extends ListenerAdapter {
                 break;
 
             case "help":
-                //TODO: Edit help message (and README) after implementing new commands:
-                //  - toggle setEphemeral
                 event.reply("""
                     ```
                     Here are the commands you can use:
                     
                     /toggle [on-name-react | on-reply-react] [true | false] - Toggles the bot's reaction triggers.
                     (Default: false for both)
+                    
+                    /toggle ephemeral-updates [true | false] - Toggle update messages to be ephemeral.
+                    (Default: false)
                     
                     /names [add | remove] [name] - Adds/Removes [name] to/from the list of names the bot reacts to. (case-insensitive)
                     
@@ -453,6 +454,8 @@ public class RBOD extends ListenerAdapter {
                     [page] will default to 1 if not specified or doesn't exist. Autocomplete will max out at 25.
                     (Default: empty)
                     
+                    /view-settings - View the bot's current settings for this server.
+                    
                     /reset [data] - Resets the bot's settings and/or custom phrases for this server to default.
                     (Options: 'all' (or just '/reset') for all, 'settings' for only settings, 'phrases' for only custom phrases)
                     
@@ -464,7 +467,9 @@ public class RBOD extends ListenerAdapter {
             break;
 
             case "view-settings":
-                //TODO
+                event.reply("```\nHere are this server's settings:\n"+ settings +"```")
+                    .setEphemeral(ephemeral)
+                    .queue();
             break;
 
             // This will never appear when using the bot, added in just in case

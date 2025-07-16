@@ -41,13 +41,16 @@ public class SettingsObj {
 
     public void setEphemeralUpdates(boolean ephemeralUpdates) { this.ephemeralUpdates = ephemeralUpdates; }
 
-    //TODO: change string format
     @Override
     public String toString() {
-        return "Settings {" +
-                "names=" + names +
-                ", reactOnName=" + reactOnName +
-                ", reactOnReply=" + reactOnReply +
-                '}';
+        String RN = reactOnName? "Enabled" : "Disabled";
+        String RR = reactOnReply? "Enabled" : "Disabled";
+        String EU = ephemeralUpdates? "Enabled" : "Disabled";
+
+        return String.format("""
+                    - Name reactions: %s
+                    - Reply reactions: %s
+                    - Ephemeral update messages: %s
+                """, RN, RR, EU);
     }
 }
