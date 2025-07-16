@@ -1,8 +1,8 @@
 package com.github.greenik03.rbod.objects;
 
 public class ServerClass {
-    String serverId;
-    SettingsObj settings;
+    final String serverId;
+    final SettingsObj settings;
 
     public ServerClass(String serverId, SettingsObj settings) {
         this.serverId = serverId;
