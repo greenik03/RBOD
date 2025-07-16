@@ -22,7 +22,7 @@ Here are all the commands for the bot:
 - `/phrases add [phrase]` - Adds [phrase] to the list of server-only (custom) phrases for the bot to use. (case-sensitive; [read "Phrase Formatting" in guide.md for more](assets/guide.md))
 - `/phrases list [page]` - Lists all custom phrases for the server, with indexes. [page] will be set to 1 if not provided, or the given page number doesn't exist. **Default: empty**
 - `/phrases remove [index]` - Removes the phrase at the given index from the list of custom phrases.
-- `/view-settings` - View the bot's current settings for this server.
+- `/view-settings` - View the bot's current settings for the server the command was used in.
 - `/reset [data]` - Resets the bot's settings and/or custom phrases for the server the command was executed from back to default.
 - `/help` - Brings up the list of commands.
 
