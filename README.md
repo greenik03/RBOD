@@ -83,6 +83,6 @@ The slash commands, by default, are enabled for members with `Manage Messages` p
 Once that's all done, the bot is ready to go! If `phrases.txt` wasn't created after running the bot, it'll create the file with placeholder text. Shut down the bot (through the terminal) if you want to make changes to the file.
 
 ## Contribution
-If you find any problems with the program, open an issue and let me know about it. \
-If there are any changes you want to make to the main repository, consider opening a pull request. \
+If you find any problems with the program or want to suggest features, open an issue or contact me on social media. \
+If you want to contribute to the repository, consider creating a branch with your changes and opening a pull request. \
 You can also fork the repository and make the bot your own, all in compliance with [the MIT License](LICENSE).
