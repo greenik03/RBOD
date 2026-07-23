@@ -3,6 +3,9 @@ package com.github.greenik03.rbod;
 import com.github.greenik03.rbod.objects.SettingsObj;
 import com.github.greenik03.rbod.paginator.NamesPaginatorManager;
 import com.github.greenik03.rbod.paginator.PhrasesPaginatorManager;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import com.github.greenik03.rbod.paginator.PaginatorSession;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -17,8 +20,6 @@ import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.Command;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -263,7 +264,7 @@ public class RBOD extends ListenerAdapter {
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
                             event.reply(session.getCurrentPage())
-                                .addActionRow(btnPrev, btnNext)
+                                .addComponents(ActionRow.of(btnPrev, btnNext))
                                 .setEphemeral(ephemeral)
                                 .queue();
                         }
@@ -367,7 +368,7 @@ public class RBOD extends ListenerAdapter {
                                     .withDisabled(session.getCurrentPageNumber() == 1);
 
                             event.reply(session.getCurrentPage())
-                                .addActionRow(btnPrev, btnNext)
+                                .addComponents(ActionRow.of(btnPrev, btnNext))
                                 .setEphemeral(ephemeral)
                                 .queue();
                         }
@@ -569,7 +570,7 @@ public class RBOD extends ListenerAdapter {
                             event.getButton().asDisabled() : event.getButton().asEnabled();
                     Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-ppm-prev", "<-");
                     btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
-                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                    event.editMessage(session.getCurrentPage()).setComponents(ActionRow.of(btnPrev, btnNext)).queue();
                 }
             }
             else if (event.getComponentId().equals(buttonID + "-ppm-prev")) {
@@ -578,7 +579,7 @@ public class RBOD extends ListenerAdapter {
                             event.getButton().asDisabled() : event.getButton().asEnabled();
                     Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-ppm-next", "->");
                     btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
-                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                    event.editMessage(session.getCurrentPage()).setComponents(ActionRow.of(btnPrev, btnNext)).queue();
                 }
             }
             else {
@@ -601,7 +602,7 @@ public class RBOD extends ListenerAdapter {
                             event.getButton().asDisabled() : event.getButton().asEnabled();
                     Button btnPrev = Button.of(ButtonStyle.SECONDARY, buttonID + "-npm-prev", "<-");
                     btnPrev = (session.getCurrentPageNumber() == 1)? btnPrev.asDisabled() : btnPrev.asEnabled();
-                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                    event.editMessage(session.getCurrentPage()).setComponents(ActionRow.of(btnPrev, btnNext)).queue();
                 }
             }
             else if (event.getComponentId().equals(buttonID + "-npm-prev")) {
@@ -610,7 +611,7 @@ public class RBOD extends ListenerAdapter {
                             event.getButton().asDisabled() : event.getButton().asEnabled();
                     Button btnNext = Button.of(ButtonStyle.SECONDARY, buttonID + "-npm-next", "->");
                     btnNext = (session.getCurrentPageNumber() == session.getPageCount())? btnNext.asDisabled() : btnNext.asEnabled();
-                    event.editMessage(session.getCurrentPage()).setActionRow(btnPrev, btnNext).queue();
+                    event.editMessage(session.getCurrentPage()).setComponents(ActionRow.of(btnPrev, btnNext)).queue();
                 }
             }
             else {
